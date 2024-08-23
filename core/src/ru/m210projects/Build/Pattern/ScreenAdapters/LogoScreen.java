@@ -16,13 +16,9 @@
 
 package ru.m210projects.Build.Pattern.ScreenAdapters;
 
-import static ru.m210projects.Build.Engine.xdim;
-import static ru.m210projects.Build.Engine.ydim;
-
-import ru.m210projects.Build.Architecture.BuildGdx;
-import ru.m210projects.Build.Architecture.BuildFrame.FrameType;
-import ru.m210projects.Build.Architecture.BuildGraphics.Option;
+import com.badlogic.gdx.Gdx;
 import ru.m210projects.Build.Pattern.BuildGame;
+import ru.m210projects.Build.Render.Renderer;
 
 public class LogoScreen extends SkippableAdapter {
 	
@@ -49,10 +45,8 @@ public class LogoScreen extends SkippableAdapter {
 	}
 
 	@Override
-	public void show()
-	{
+	public void show() {
 		this.gTicks = 0;
-		game.pInput.ctrlResetKeyStatus();
 	}
 
 	@Override
@@ -60,23 +54,13 @@ public class LogoScreen extends SkippableAdapter {
 		
 		if( (gTicks += delta) >= gShowTime && callback != null)
 		{
-			BuildGdx.app.postRunnable(callback);
+			Gdx.app.postRunnable(callback);
 			callback = null;
 		}
 
-		engine.clearview(0);
-		engine.rotatesprite(160 << 16, 100 << 16, 65536, 0, nTile, 0, 0, 10 | 64, 0, 0, xdim - 1, ydim - 1);
-	}
-	
-	@Override
-	public void pause () {
-		if (BuildGdx.graphics.getFrameType() == FrameType.GL) 
-			BuildGdx.graphics.extra(Option.GLDefConfiguration);
-	}
-
-	@Override
-	public void resume () {
-		game.updateColorCorrection();
+		Renderer renderer = game.getRenderer();
+		renderer.clearview(0);
+		renderer.rotatesprite(160 << 16, 100 << 16, 65536, 0, nTile, 0, 0, 10 | 64);
 	}
 
 }

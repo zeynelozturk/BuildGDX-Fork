@@ -1,3 +1,19 @@
+// This file is part of BuildGDX.
+// Copyright (C) 2023-2024 Alexander Makarov-[M210] (m210-2007@mail.ru)
+//
+// BuildGDX is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// BuildGDX is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with BuildGDX.  If not, see <http://www.gnu.org/licenses/>.
+
 package ru.m210projects.Build.Render.GdxRender.Scanner;
 
 import java.util.ArrayList;
@@ -5,17 +21,12 @@ import java.util.ArrayList;
 import com.badlogic.gdx.math.Frustum;
 import com.badlogic.gdx.math.Plane;
 
-import ru.m210projects.Build.Render.GdxRender.Pool;
+import ru.m210projects.Build.Types.collections.Pool;
 import ru.m210projects.Build.Render.GdxRender.Tesselator.Vertex;
 
 public class PolygonClipper {
 
-	private final Pool<Vertex> vecs = new Pool<Vertex>() {
-		@Override
-		protected Vertex newObject() {
-			return new Vertex(0, 0);
-		}
-	};
+	private final Pool<Vertex> vecs = new Pool<>(() -> new Vertex(0, 0));
 	ArrayList<Vertex> list = new ArrayList<Vertex>();
 
 //	private Vector3[] dst = new Vector3[8];
@@ -57,8 +68,9 @@ public class PolygonClipper {
 		dst.clear();
 		for (int i = 0; i < src.size(); i++) {
 			int j = i + 1;
-			if (j >= src.size())
+			if (j >= src.size()) {
 				j = 0;
+			}
 
 			Vertex v1 = src.get(i);
 			Vertex v2 = src.get(j);
@@ -66,8 +78,9 @@ public class PolygonClipper {
 			float t1 = p.distance(v1);
 			float t2 = p.distance(v2);
 
-			if (t1 >= 0.0f)
+			if (t1 >= 0.0f) {
 				dst.add(v1);
+			}
 
 			if ((t1 >= 0.0f) != (t2 >= 0.0f)) {
 				float r = t1 / (t1 - t2);
@@ -96,8 +109,9 @@ public class PolygonClipper {
 		for (int i = 3; i < 6; i++) {
 			if ((i % 2) != 0) {
 				ClipPlane(planes[i], list, src);
-			} else
+			} else {
 				ClipPlane(planes[i], src, list);
+			}
 		}
 		return src;
 	}

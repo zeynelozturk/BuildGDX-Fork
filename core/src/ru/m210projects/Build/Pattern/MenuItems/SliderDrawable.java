@@ -20,7 +20,8 @@ import static ru.m210projects.Build.Gameutils.coordsConvertXScaled;
 import static ru.m210projects.Build.Gameutils.coordsConvertYScaled;
 
 import ru.m210projects.Build.Engine;
-import ru.m210projects.Build.Gameutils.ConvertType;
+import ru.m210projects.Build.Render.Renderer;
+import ru.m210projects.Build.Types.ConvertType;
 
 public abstract class SliderDrawable {
 	
@@ -40,55 +41,55 @@ public abstract class SliderDrawable {
 	
 	public abstract void drawScroller(int x, int y, int shade, int pal);
 
-	protected void drawSliderBackground(Engine draw, int x, int y, int height, int col)
+	protected void drawSliderBackground(Renderer renderer, int x, int y, int height, int col)
 	{
 		int x1 = coordsConvertXScaled(x, ConvertType.Normal);
 		int y1 = coordsConvertYScaled(y);
 		int x2 = coordsConvertXScaled(x + getSliderRange(), ConvertType.Normal);
 		int y2 = coordsConvertYScaled(y + height);
 		
-		draw.getrender().drawline256(x1 * 4096, y1 * 4096, x2 * 4096, y1 * 4096, col);
-		draw.getrender().drawline256(x1 * 4096, y2 * 4096, x2 * 4096, y2 * 4096, col);
-		draw.getrender().drawline256(x1 * 4096, y1 * 4096, x1 * 4096, y2 * 4096, col);
-		draw.getrender().drawline256(x2 * 4096, y1 * 4096, x2 * 4096, y2 * 4096, col);
+		renderer.drawline256(x1 * 4096, y1 * 4096, x2 * 4096, y1 * 4096, col);
+		renderer.drawline256(x1 * 4096, y2 * 4096, x2 * 4096, y2 * 4096, col);
+		renderer.drawline256(x1 * 4096, y1 * 4096, x1 * 4096, y2 * 4096, col);
+		renderer.drawline256(x2 * 4096, y1 * 4096, x2 * 4096, y2 * 4096, col);
 	}
 	
-	protected void drawSlider(Engine draw, int x, int y, int height, int col)
+	protected void drawSlider(Renderer renderer, int x, int y, int height, int col)
 	{
 		int x1 = coordsConvertXScaled(x, ConvertType.Normal);
 		int y1 = coordsConvertYScaled(y);
 		int x2 = coordsConvertXScaled(x + getSliderWidth(), ConvertType.Normal);
 		int y2 = coordsConvertYScaled(y + height);
 		
-		draw.getrender().drawline256(x1 * 4096, y1 * 4096, x2 * 4096, y1 * 4096, col);
-		draw.getrender().drawline256(x1 * 4096, y2 * 4096, x2 * 4096, y2 * 4096, col);
-		draw.getrender().drawline256(x1 * 4096, y1 * 4096, x1 * 4096, y2 * 4096, col);
-		draw.getrender().drawline256(x2 * 4096, y1 * 4096, x2 * 4096, y2 * 4096, col);
+		renderer.drawline256(x1 * 4096, y1 * 4096, x2 * 4096, y1 * 4096, col);
+		renderer.drawline256(x1 * 4096, y2 * 4096, x2 * 4096, y2 * 4096, col);
+		renderer.drawline256(x1 * 4096, y1 * 4096, x1 * 4096, y2 * 4096, col);
+		renderer.drawline256(x2 * 4096, y1 * 4096, x2 * 4096, y2 * 4096, col);
 	}
 	
-	protected void drawScrollerBackground(Engine draw, int x, int y, int height, int col)
+	protected void drawScrollerBackground(Renderer renderer, int x, int y, int height, int col)
 	{
 		int x1 = coordsConvertXScaled(x - 1, ConvertType.Normal);
 		int y1 = coordsConvertYScaled(y - 1);
 		int x2 = coordsConvertXScaled(x + getScrollerWidth() + 1, ConvertType.Normal);
 		int y2 = coordsConvertYScaled(y + height + 1);
 		
-		draw.getrender().drawline256(x1 * 4096, y1 * 4096, x2 * 4096, y1 * 4096, col);
-		draw.getrender().drawline256(x1 * 4096, y2 * 4096, x2 * 4096, y2 * 4096, col);
-		draw.getrender().drawline256(x1 * 4096, y1 * 4096, x1 * 4096, y2 * 4096, col);
-		draw.getrender().drawline256(x2 * 4096, y1 * 4096, x2 * 4096, y2 * 4096, col);
+		renderer.drawline256(x1 * 4096, y1 * 4096, x2 * 4096, y1 * 4096, col);
+		renderer.drawline256(x1 * 4096, y2 * 4096, x2 * 4096, y2 * 4096, col);
+		renderer.drawline256(x1 * 4096, y1 * 4096, x1 * 4096, y2 * 4096, col);
+		renderer.drawline256(x2 * 4096, y1 * 4096, x2 * 4096, y2 * 4096, col);
 	}
 	
-	protected void drawScroller(Engine draw, int x, int y, int col)
+	protected void drawScroller(Renderer renderer, int x, int y, int col)
 	{
 		int x1 = coordsConvertXScaled(x, ConvertType.Normal);
 		int y1 = coordsConvertYScaled(y);
 		int x2 = coordsConvertXScaled(x + getScrollerWidth(), ConvertType.Normal);
 		int y2 = coordsConvertYScaled(y + getScrollerHeight());
 		
-		draw.getrender().drawline256(x1 * 4096, y1 * 4096, x2 * 4096, y1 * 4096, col);
-		draw.getrender().drawline256(x1 * 4096, y2 * 4096, x2 * 4096, y2 * 4096, col);
-		draw.getrender().drawline256(x1 * 4096, y1 * 4096, x1 * 4096, y2 * 4096, col);
-		draw.getrender().drawline256(x2 * 4096, y1 * 4096, x2 * 4096, y2 * 4096, col);
+		renderer.drawline256(x1 * 4096, y1 * 4096, x2 * 4096, y1 * 4096, col);
+		renderer.drawline256(x1 * 4096, y2 * 4096, x2 * 4096, y2 * 4096, col);
+		renderer.drawline256(x1 * 4096, y1 * 4096, x1 * 4096, y2 * 4096, col);
+		renderer.drawline256(x2 * 4096, y1 * 4096, x2 * 4096, y2 * 4096, col);
 	}
 }

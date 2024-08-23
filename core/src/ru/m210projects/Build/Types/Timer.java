@@ -40,8 +40,9 @@ public class Timer {
 
 	public static void startAverage() {
 		startTime = System.nanoTime();
-		if (startAvrTime == -1)
+		if (startAvrTime == -1) {
 			startAvrTime = startTime;
+		}
 	}
 
 	public static long resultAverage(int updateTimeSec) {
@@ -70,8 +71,9 @@ public class Timer {
 	}
 
 	public static float getAverage() {
-		if(Avrcount != 0)
-			return ((AvrSummTime / Avrcount) / 1000000f);
+		if(Avrcount != 0) {
+			return (((float) AvrSummTime / Avrcount) / 1000000f);
+		}
 		return AvrSummTime / 1000000f;
 	}
 

@@ -16,214 +16,213 @@
 
 package ru.m210projects.Build.Script;
 
-import static ru.m210projects.Build.Engine.MAXSPRITES;
-import static ru.m210projects.Build.Engine.MAXTILES;
-import static ru.m210projects.Build.Engine.MAXUNIQHUDID;
-
+import com.badlogic.gdx.utils.Array;
+import org.jetbrains.annotations.Nullable;
 import ru.m210projects.Build.Render.ModelHandle.MDInfo;
-import ru.m210projects.Build.Render.ModelHandle.VoxelInfo;
 import ru.m210projects.Build.Render.ModelHandle.ModelInfo;
+import ru.m210projects.Build.Render.ModelHandle.VoxelInfo;
 import ru.m210projects.Build.Render.Types.Hudtyp;
 import ru.m210projects.Build.Render.Types.Tile2model;
+import ru.m210projects.Build.Types.collections.DynamicArray;
+
+import static ru.m210projects.Build.Engine.MAXSPRITESV7;
+import static ru.m210projects.Build.Engine.MAXTILES;
 
 public class ModelsInfo {
 
-	public static class Spritesmooth {
-		public float smoothduration;
-		public short mdcurframe;
-		public short mdoldframe;
-		public short mdsmooth;
-	}
+    private final DynamicArray<Tile2model> cache = new DynamicArray<>(MAXTILES, Tile2model.class, false);
+    private final Hudtyp[][] hudInfo = new Hudtyp[2][MAXTILES];
+    private final Array<Spritesmooth> spritesmooth = new DynamicArray<>(MAXSPRITESV7, Spritesmooth.class);
+    private final Array<SpriteAnim> spriteanim = new DynamicArray<>(MAXSPRITESV7, SpriteAnim.class);
 
-	public static class SpriteAnim {
-		public long mdanimtims;
-		public short mdanimcur;
+    public ModelsInfo() {
+    }
 
-	}
+    public ModelsInfo(ModelsInfo src, boolean disposable) {
+        for (int i = 0; i < src.cache.size; i++) {
+            Tile2model t2m = src.cache.get(i);
+            if (t2m != null) {
+                cache.set(i, t2m.clone(disposable));
+            }
+        }
 
-	private final Tile2model[] cache = new Tile2model[MAXTILES];
-	private final Hudtyp[][] hudInfo = new Hudtyp[2][MAXTILES];
-	private final Spritesmooth[] spritesmooth = new Spritesmooth[MAXSPRITES + MAXUNIQHUDID];
-	private final SpriteAnim[] spriteanim = new SpriteAnim[MAXSPRITES + MAXUNIQHUDID];
+        for (int i = 0; i < 2; i++) {
+            for (int j = 0; j < MAXTILES; j++) {
+                if (src.hudInfo[i] != null && src.hudInfo[i][j] != null) {
+                    hudInfo[i][j] = src.hudInfo[i][j].clone();
+                }
+            }
+        }
+    }
 
-	public ModelsInfo() {
-		for (int i = 0; i < spritesmooth.length; i++)
-			spritesmooth[i] = new Spritesmooth();
+    public Spritesmooth getSmoothParams(int i) {
+        return spritesmooth.get(i);
+    }
 
-		for (int i = 0; i < spriteanim.length; i++)
-			spriteanim[i] = new SpriteAnim();
-	}
+    public SpriteAnim getAnimParams(int i) {
+        return spriteanim.get(i);
+    }
 
-	public ModelsInfo(ModelsInfo src, boolean disposable) {
-		for (int i = 0; i < cache.length; i++) {
-			if (src.cache[i] != null)
-				cache[i] = src.cache[i].clone(disposable);
-		}
-		for (int i = 0; i < 2; i++)
-			for (int j = 0; j < MAXTILES; j++) {
-				if (src.hudInfo[i] != null && src.hudInfo[i][j] != null)
-					hudInfo[i][j] = src.hudInfo[i][j].clone();
-			}
-		for (int i = 0; i < spritesmooth.length; i++)
-			spritesmooth[i] = new Spritesmooth();
+    public ModelInfo getModelInfo(int picnum) {
+        Tile2model t2m = cache.get(picnum);
+        if (t2m != null) {
+            return t2m.model;
+        }
+        return null;
+    }
 
-		for (int i = 0; i < spriteanim.length; i++)
-			spriteanim[i] = new SpriteAnim();
-	}
+    public VoxelInfo getVoxelInfo(int picnum) {
+        Tile2model t2m = cache.get(picnum);
+        if (t2m != null) {
+            return t2m.voxel;
+        }
+        return null;
+    }
 
-	public Spritesmooth getSmoothParams(int i) {
-		return spritesmooth[i];
-	}
+    public int getTile(ModelInfo model) {
+        for (int i = cache.size - 1; i >= 0; i--) {
+            Tile2model t2m = cache.get(i);
+            if (t2m != null && t2m.model == model) {
+                return i;
+            }
+        }
 
-	public SpriteAnim getAnimParams(int i) {
-		return spriteanim[i];
-	}
+        return -1;
+    }
 
-	public ModelInfo getModelInfo(int picnum) {
-		if (cache[picnum] != null)
-			return cache[picnum].model;
+    @Nullable
+    public Tile2model getParams(int picnum) {
+        return cache.get(picnum);
+    }
 
-		return null;
-	}
+    public Hudtyp getHudInfo(int picnum, int flags) {
+        if (hudInfo[(flags >> 2) & 1] != null) {
+            return hudInfo[(flags >> 2) & 1][picnum];
+        }
 
-	public VoxelInfo getVoxelInfo(int picnum) {
-		if (cache[picnum] != null)
-			return cache[picnum].voxel;
+        return null;
+    }
 
-		return null;
-	}
+    protected Tile2model getCache(int picnum, int pal) {
+        Tile2model t2m = cache.get(picnum);
+        if (t2m == null) {
+            t2m = cache.getInstance(picnum);
+            t2m.palette = pal;
+            return t2m;
+        } else {
+            if (t2m.palette == pal) {
+                return t2m;
+            }
 
-	public int getTile(ModelInfo model) {
-		for (int i = MAXTILES - 1; i >= 0; i--) {
-			if (cache[i] == null)
-				continue;
+            Tile2model n = t2m;
+            while (n.next != null) {
+                n = n.next;
+                if (n.palette == pal) {
+                    return n;
+                }
+            }
 
-			if (cache[i].model == model) {
-				return i;
-			}
-		}
+            Tile2model current = new Tile2model();
+            current.palette = pal;
+            n.next = current;
+            return current;
+        }
+    }
 
-		return -1;
-	}
+    public int addModelInfo(ModelInfo md, int picnum, String framename, int skinnum, float smooth, int pal) {
+        if (md == null) {
+            return -1;
+        }
 
-	public Tile2model getParams(int picnum) {
-		if (cache[picnum] != null)
-			return cache[picnum];
+        int i = -3;
+        switch (md.getType()) {
+            case Voxel:
+                smooth = skinnum = i = 0;
+                break;
+            case Md2:
+            case Md3:
+                if (framename == null) {
+                    return (-3);
+                }
 
-		return null;
-	}
+                i = ((MDInfo) md).getFrameIndex(framename);
+                break;
+        }
 
-	public Hudtyp getHudInfo(int picnum, int flags) {
-		if (hudInfo[(flags >> 2) & 1] != null)
-			return hudInfo[(flags >> 2) & 1][picnum];
+        Tile2model current = getCache(picnum, pal);
+        current.model = md;
+        current.framenum = i;
+        current.skinnum = skinnum;
+        current.smoothduration = smooth;
 
-		return null;
-	}
+        return i;
+    }
 
-	protected Tile2model getCache(int picnum, int pal) {
-		if (cache[picnum] == null) {
-			cache[picnum] = new Tile2model();
-			cache[picnum].palette = pal;
-			return cache[picnum];
-		} else {
-			if (cache[picnum].palette == pal)
-				return cache[picnum];
-			else {
-				Tile2model n = cache[picnum];
-				while (n.next != null) {
-					n = n.next;
-					if (n.palette == pal)
-						return n;
-				}
+    public int addVoxelInfo(VoxelInfo md, int picnum) {
+        if (md == null) {
+            return -1;
+        }
 
-				Tile2model current = n.next = new Tile2model();
-				current.palette = pal;
-				return current;
-			}
-		}
-	}
+        Tile2model t2m = cache.getInstance(picnum);
+        t2m.voxel = md;
+        return 0;
+    }
 
-	public int addModelInfo(ModelInfo md, int picnum, String framename, int skinnum, float smooth, int pal) {
-		if (picnum >= MAXTILES)
-			return (-2);
-		if (md == null)
-			return -1;
+    public void removeModelInfo(ModelInfo md) {
+        for (int i = cache.size - 1; i >= 0; i--) {
+            Tile2model t2m = cache.get(i);
+            if (t2m != null && t2m.model == md) {
+                t2m.model = null;
+            }
+        }
+    }
 
-		int i = -3;
-		switch (md.getType()) {
-		case Voxel:
-			smooth = skinnum = i = 0;
-			break;
-		case Md2:
-		case Md3:
-			if (framename == null)
-				return (-3);
+    public int addHudInfo(int tilex, double xadd, double yadd, double zadd, short angadd, int flags, int fov) {
+        if (tilex >= MAXTILES) {
+            return -2;
+        }
 
-			i = ((MDInfo) md).getFrameIndex(framename);
-			break;
-		}
+        if (hudInfo[(flags >> 2) & 1] == null || hudInfo[(flags >> 2) & 1][tilex] == null) {
+            hudInfo[(flags >> 2) & 1][tilex] = new Hudtyp();
+        }
 
-		Tile2model current = getCache(picnum, pal);
-		current.model = md;
-		current.framenum = i;
-		current.skinnum = skinnum;
-		current.smoothduration = smooth;
+        Hudtyp hud = hudInfo[(flags >> 2) & 1][tilex];
 
-		return i;
-	}
+        hud.xadd = (float) xadd;
+        hud.yadd = (float) yadd;
+        hud.zadd = (float) zadd;
+        hud.angadd = (short) (angadd | 2048);
+        hud.flags = (short) flags;
+        hud.fov = (short) fov;
 
-	public int addVoxelInfo(VoxelInfo md, int picnum) {
-		if (picnum >= MAXTILES)
-			return (-2);
-		if (md == null)
-			return -1;
+        return 0;
+    }
 
-		if (cache[picnum] == null)
-			cache[picnum] = new Tile2model();
+    public void dispose() {
+        for (int i = cache.size - 1; i >= 0; i--) {
+            Tile2model t2m = cache.get(i);
+            if (t2m == null) {
+                continue;
+            }
 
-		cache[picnum].voxel = md;
-		return 0;
-	}
+            if (!t2m.disposable) {
+                continue;
+            }
 
-	public void removeModelInfo(ModelInfo md) {
-		for (int i = MAXTILES - 1; i >= 0; i--) {
-			if (cache[i] == null)
-				continue;
+            cache.set(i, null);
+        }
+    }
 
-			if (cache[i].model == md) {
-				cache[i].model = null;
-			}
-		}
-	}
+    public static class Spritesmooth {
+        public float smoothduration;
+        public short mdcurframe;
+        public short mdoldframe;
+        public short mdsmooth;
+    }
 
-	public int addHudInfo(int tilex, double xadd, double yadd, double zadd, short angadd, int flags, int fov) {
-		if (tilex >= MAXTILES)
-			return -2;
+    public static class SpriteAnim {
+        public long mdanimtims;
+        public short mdanimcur;
 
-		if (hudInfo[(flags >> 2) & 1] == null || hudInfo[(flags >> 2) & 1][tilex] == null)
-			hudInfo[(flags >> 2) & 1][tilex] = new Hudtyp();
-
-		Hudtyp hud = hudInfo[(flags >> 2) & 1][tilex];
-
-		hud.xadd = (float) xadd;
-		hud.yadd = (float) yadd;
-		hud.zadd = (float) zadd;
-		hud.angadd = (short) (angadd | 2048);
-		hud.flags = (short) flags;
-		hud.fov = (short) fov;
-
-		return 0;
-	}
-
-	public void dispose() {
-		for (int i = MAXTILES - 1; i >= 0; i--) {
-			if (cache[i] == null)
-				continue;
-
-			if (!cache[i].disposable)
-				continue;
-
-			cache[i] = null;
-		}
-	}
+    }
 }

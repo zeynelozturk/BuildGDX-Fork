@@ -16,7 +16,6 @@
 
 package ru.m210projects.Build.Pattern.CommonMenus;
 
-import ru.m210projects.Build.Pattern.BuildFont;
 import ru.m210projects.Build.Pattern.BuildGame;
 import ru.m210projects.Build.Pattern.MenuItems.BuildMenu;
 import ru.m210projects.Build.Pattern.MenuItems.MenuButton;
@@ -24,7 +23,8 @@ import ru.m210projects.Build.Pattern.MenuItems.MenuHandler;
 import ru.m210projects.Build.Pattern.MenuItems.MenuText;
 import ru.m210projects.Build.Pattern.MenuItems.MenuTitle;
 import ru.m210projects.Build.Pattern.MenuItems.MenuVariants;
-import ru.m210projects.Build.Settings.BuildConfig;
+import ru.m210projects.Build.settings.GameConfig;
+import ru.m210projects.Build.Types.font.Font;
 
 public abstract class MenuControls extends BuildMenu {
 	
@@ -40,12 +40,13 @@ public abstract class MenuControls extends BuildMenu {
 	
 	public abstract BuildMenu getKeyboardMenu(BuildGame app);
 	
-	public abstract void mResetDefault(BuildConfig cfg, MenuHandler menu);
+	public abstract void mResetDefault(GameConfig cfg, MenuHandler menu);
 	
-	public abstract void mResetClassic(BuildConfig cfg, MenuHandler menu);
+	public abstract void mResetClassic(GameConfig cfg, MenuHandler menu);
 	
-	public MenuControls(BuildGame app, int posy, int questionPos, int menuHeight, int separatorHeight, BuildFont style, int pal, int questionPal)
+	public MenuControls(BuildGame app, int posy, int questionPos, int menuHeight, int separatorHeight, Font style, int pal, int questionPal)
 	{
+		super(app.pMenu);
 		addItem(getTitle(app, "Controls setup"), false);
 
 		MenuButton mMouse = new MenuButton("Mouse setup", style, 0, posy += menuHeight, 320, 1, pal, getMouseMenu(app), -1, null, 0);
@@ -67,13 +68,13 @@ public abstract class MenuControls extends BuildMenu {
 		addItem(mKeyReset2, false);
 	}
 	
-	protected BuildMenu getResetDefaultMenu(final BuildGame app, BuildFont style, int posy, int pal)
+	protected BuildMenu getResetDefaultMenu(final BuildGame app, Font style, int posy, int pal)
 	{
-		BuildMenu menu = new BuildMenu();
+		BuildMenu menu = new BuildMenu(app.pMenu);
 		
 		MenuText QuitQuestion = new MenuText("Do you really want to reset keys?", style, 160, posy, 1);
 		QuitQuestion.pal = pal;
-		MenuVariants QuitVariants = new MenuVariants(app.pEngine, "[Y/N]", style, 160, posy += 2 * style.getHeight()) {
+		MenuVariants QuitVariants = new MenuVariants(app.pEngine, "[Y/N]", style, 160, posy += 2 * style.getSize()) {
 			@Override
 			public void positive(MenuHandler menu) {
 				mResetDefault(app.pCfg, menu);
@@ -87,13 +88,13 @@ public abstract class MenuControls extends BuildMenu {
 		return menu;
 	}
 	
-	protected BuildMenu getResetClassicMenu(final BuildGame app, BuildFont style, int posy, int pal)
+	protected BuildMenu getResetClassicMenu(final BuildGame app, Font style, int posy, int pal)
 	{
-		BuildMenu menu = new BuildMenu();
+		BuildMenu menu = new BuildMenu(app.pMenu);
 		
 		MenuText QuitQuestion = new MenuText("Do you really want reset to classic keys?", style, 160, posy, 1);
 		QuitQuestion.pal = pal;
-		MenuVariants QuitVariants = new MenuVariants(app.pEngine, "[Y/N]", style, 160, posy += 2 * style.getHeight()) {
+		MenuVariants QuitVariants = new MenuVariants(app.pEngine, "[Y/N]", style, 160, posy += 2 * style.getSize()) {
 			@Override
 			public void positive(MenuHandler menu) {
 				mResetClassic(app.pCfg, menu);

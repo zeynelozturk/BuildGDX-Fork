@@ -16,13 +16,10 @@
 
 package ru.m210projects.Build.Pattern.CommonMenus;
 
-import static ru.m210projects.Build.Net.Mmulti.NETPORT;
+import static ru.m210projects.Build.net.Mmulti.NETPORT;
 import static ru.m210projects.Build.Pattern.MenuItems.MenuTextField.LETTERS;
 import static ru.m210projects.Build.Pattern.MenuItems.MenuTextField.NUMBERS;
 
-import java.util.Arrays;
-
-import ru.m210projects.Build.Pattern.BuildFont;
 import ru.m210projects.Build.Pattern.BuildGame;
 import ru.m210projects.Build.Pattern.MenuItems.BuildMenu;
 import ru.m210projects.Build.Pattern.MenuItems.MenuButton;
@@ -33,6 +30,8 @@ import ru.m210projects.Build.Pattern.MenuItems.MenuSlider;
 import ru.m210projects.Build.Pattern.MenuItems.MenuSwitch;
 import ru.m210projects.Build.Pattern.MenuItems.MenuTextField;
 import ru.m210projects.Build.Pattern.MenuItems.MenuTitle;
+import ru.m210projects.Build.Pattern.ScreenAdapters.ConnectAdapter;
+import ru.m210projects.Build.Types.font.Font;
 
 public abstract class MenuCreate extends BuildMenu {
 	
@@ -45,8 +44,9 @@ public abstract class MenuCreate extends BuildMenu {
 	public MenuSwitch mMenuFakeMM;
 	public MenuButton mCreate;
 	
-	public MenuCreate(final BuildGame app, int posx, int posy, int menuHeight, int width, BuildFont style, int kMaxPlayers)
+	public MenuCreate(final BuildGame app, int posx, int posy, int menuHeight, int width, Font style, int kMaxPlayers)
 	{
+		super(app.pMenu);
 		addItem(getTitle(app, "Multiplayer"), false);
 		
 		mPlayerNum = new MenuSlider(app.pSlider, "Number of players", style, posx, posy += menuHeight, width, mPlayers, 1,
@@ -58,35 +58,28 @@ public abstract class MenuCreate extends BuildMenu {
 					}
 				}, true);
 
-		mPortnum = new MenuTextField("Network socket number", "" + app.pCfg.mPort, style, posx, posy += menuHeight, width,
-				NUMBERS, new MenuProc() {
-					@Override
-					public void run(MenuHandler handler, MenuItem pItem) {
-						MenuTextField item = (MenuTextField) pItem;
-						if(item.typed.length() < 8) {
-							app.pCfg.mPort = Integer.parseInt(item.typed);
-						}
-						else {
-							System.arraycopy(item.otypingBuf, 0, item.typingBuf, 0, 16);
-							item.inputlen = item.oinputlen;
-						}
-					}
-				});
+		mPortnum = new MenuTextField("Network socket number", "", style, posx, posy += menuHeight, width,
+				NUMBERS, (handler, pItem) -> {
+                    MenuTextField item = (MenuTextField) pItem;
+                    String numbers = item.getText();
+                    if(numbers.length() < 8) {
+                        app.pCfg.setPort(Integer.parseInt(numbers));
+                    } else {
+                        mPortnum.setText("" + app.pCfg.getPort());
+                    }
+                }) {
+			@Override
+			public void open() {
+				setText("" + app.pCfg.getPort());
+			}
+		};
 
-		mPlayer = new MenuTextField("Player name", app.pCfg.pName, style, posx, posy += menuHeight, width, NUMBERS | LETTERS,
-				new MenuProc() {
-					@Override
-					public void run(MenuHandler handler, MenuItem pItem) {
-						MenuTextField item = (MenuTextField) pItem;
-						app.pCfg.pName = item.typed;
-					}
-				}) {
+		mPlayer = new MenuTextField("Player name", "", style, posx, posy += menuHeight, width, NUMBERS | LETTERS,
+                (handler, pItem) -> app.pCfg.setpName(((MenuTextField) pItem).getText())) {
 			
 			@Override
 			public void open() {
-				Arrays.fill(typingBuf, (char) 0);
-				inputlen = app.pCfg.pName.length();
-				System.arraycopy(app.pCfg.pName.toCharArray(), 0, typingBuf, 0, inputlen);
+				setText(app.pCfg.getpName());
 			}
 		};
 		
@@ -106,8 +99,12 @@ public abstract class MenuCreate extends BuildMenu {
 		mCreate = new MenuButton("Create", style, 0, posy + (2 * menuHeight), 320, 1, 0, null, -1, new MenuProc() {
 			@Override
 			public void run(MenuHandler handler, MenuItem pItem) {
+				if (app.getScreen() instanceof ConnectAdapter) {
+					return;
+				}
+
 				String[] param = new String[] { "-n0" + (mPlayers != 2 ? (":" + mPlayers) : ""),
-						(app.pCfg.mPort != NETPORT ? ("-p " + app.pCfg.mPort) : null) };
+						(app.pCfg.getPort() != NETPORT ? ("-p " + app.pCfg.getPort()) : null) };
 
 				createGame(mPlayers, mUseFakeMultiplayer, param);
 			}

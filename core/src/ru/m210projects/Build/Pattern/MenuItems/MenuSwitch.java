@@ -16,18 +16,20 @@
 
 package ru.m210projects.Build.Pattern.MenuItems;
 
-import ru.m210projects.Build.Pattern.BuildFont;
-import ru.m210projects.Build.Pattern.BuildFont.TextAlign;
 import ru.m210projects.Build.Pattern.MenuItems.MenuHandler.MenuOpt;
+import ru.m210projects.Build.Types.ConvertType;
+import ru.m210projects.Build.Types.Transparent;
+import ru.m210projects.Build.Types.font.Font;
+import ru.m210projects.Build.Types.font.TextAlign;
 
 public class MenuSwitch extends MenuItem
 {
 	public boolean value;
 	public MenuProc callback;
 	char[] onMessage, offMessage;
-	public BuildFont switchFont;
+	public Font switchFont;
 	
-	public MenuSwitch(Object text, BuildFont font, int x, int y, int width, boolean value, 
+	public MenuSwitch(Object text, Font font, int x, int y, int width, boolean value,
 			MenuProc callback, String onMessage, String offMessage) 
 	{
 		super(text, font);
@@ -37,14 +39,16 @@ public class MenuSwitch extends MenuItem
 		this.width = width;
 		this.value = value;
 		this.callback = callback;
-		if(onMessage != null)
+		if(onMessage != null) {
 			this.onMessage = onMessage.toCharArray();
-		else
+		} else {
 			this.onMessage = new char[]{ 'O', 'n' };
-		if(offMessage != null)
+		}
+		if(offMessage != null) {
 			this.offMessage = offMessage.toCharArray();
-		else
+		} else {
 			this.offMessage = new char[]{ 'O', 'f', 'f' };
+		}
 		
 		this.switchFont = font;
 	}
@@ -54,12 +58,15 @@ public class MenuSwitch extends MenuItem
 		int shade = handler.getShade(this);
 		int pal = handler.getPal(font, this);
 		
-		if ( text != null )
-			font.drawText(x, y, text, shade, pal, TextAlign.Left, 2, fontShadow);
+		if ( text != null ) {
+			font.drawTextScaled(handler.getRenderer(), x, y, text, 1.0f, shade, pal, TextAlign.Left, Transparent.None, ConvertType.Normal,  fontShadow);
+		}
 		char[] sw = offMessage;
-		if(value) sw = onMessage;
+		if(value) {
+			sw = onMessage;
+		}
 		
-		switchFont.drawText(x + width - 1 - switchFont.getWidth(sw), y + (font.getHeight() - switchFont.getHeight()) / 2, sw, shade, handler.getPal(switchFont, this), TextAlign.Left, 2, fontShadow);
+		switchFont.drawTextScaled(handler.getRenderer(), x + width - 1 - switchFont.getWidth(sw, 1.0f), y + (font.getSize() - switchFont.getSize()) / 2, sw, 1.0f, shade, handler.getPal(switchFont, this), TextAlign.Left, Transparent.None, ConvertType.Normal,  fontShadow);
 		handler.mPostDraw(this);
 	}
 	
@@ -67,31 +74,41 @@ public class MenuSwitch extends MenuItem
 	public boolean callback(MenuHandler handler, MenuOpt opt) {
 		if(opt == MenuOpt.LEFT || opt == MenuOpt.RIGHT || opt == MenuOpt.ENTER || opt == MenuOpt.LMB)
 		{
-			if ( (flags & 4) == 0 ) return false;
+			if ( (flags & 4) == 0 ) {
+				return false;
+			}
 			
 			value = !value;
-			if(callback != null) 
+			if(callback != null) {
 				callback.run(handler, this);
+			}
 			return false;
-		} else return m_pMenu.mNavigation(opt);
+		} else {
+			return m_pMenu.mNavigation(opt);
+		}
 	}
 
 	@Override
 	public boolean mouseAction(int mx, int my) {
 		if(text != null)
 		{
-			if(mx > x && mx < x + font.getWidth(text))
-				if(my > y && my < y + font.getHeight())
+			if(mx > x && mx < x + font.getWidth(text, 1.0f)) {
+				if(my > y && my < y + font.getSize()) {
 					return true;
+				}
+			}
 		}
 		
 		char[] sw = offMessage;
-		if(value) sw = onMessage;
+		if(value) {
+			sw = onMessage;
+		}
 
-		int fontx = font.getWidth(sw);
+		int fontx = font.getWidth(sw, 1.0f);
 		int px = x + width - 1 - fontx;
-		if(mx > px && mx < px + fontx)
-            return my > y && my < y + font.getHeight();
+		if(mx > px && mx < px + fontx) {
+			return my > y && my < y + font.getSize();
+		}
 		
 		return false;
 	}

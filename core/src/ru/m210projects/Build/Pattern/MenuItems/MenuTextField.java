@@ -16,210 +16,230 @@
 
 package ru.m210projects.Build.Pattern.MenuItems;
 
-import static ru.m210projects.Build.Engine.getInput;
-import static ru.m210projects.Build.Engine.totalclock;
-import static ru.m210projects.Build.Input.KeyInput.*;
-import static ru.m210projects.Build.Input.Keymap.*;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.Input.Keys;
+import ru.m210projects.Build.Pattern.MenuItems.MenuHandler.MenuOpt;
+import ru.m210projects.Build.Render.Renderer;
+import ru.m210projects.Build.Types.ConvertType;
+import ru.m210projects.Build.Types.Transparent;
+import ru.m210projects.Build.Types.font.CharInfo;
+import ru.m210projects.Build.Types.font.Font;
+import ru.m210projects.Build.Types.font.TextAlign;
+import ru.m210projects.Build.input.InputListener;
+import ru.m210projects.Build.osd.OsdCommandPrompt;
+
 import static ru.m210projects.Build.Strhandler.isalpha;
 import static ru.m210projects.Build.Strhandler.isdigit;
 
-import com.badlogic.gdx.Input.Keys;
+public class MenuTextField extends MenuItem implements InputListener {
 
-import ru.m210projects.Build.Architecture.BuildGdx;
-import ru.m210projects.Build.Input.InputCallback;
-import ru.m210projects.Build.Pattern.BuildFont;
-import ru.m210projects.Build.Pattern.BuildFont.TextAlign;
-import ru.m210projects.Build.Pattern.MenuItems.MenuHandler.MenuOpt;
+    public static final int LETTERS = 1;
+    public static final int NUMBERS = 2;
+    public static final int SYMBOLS = 4;
+    public static final int POINT = 8;
 
-public class MenuTextField extends MenuItem {
+    private final OsdCommandPrompt prompt;
+    protected String oldInput = "";
 
-	public static final int LETTERS = 1;
-	public static final int NUMBERS = 2;
-	public static final int SYMBOLS = 4;
-	public static final int POINT = 8;
-	
-	public char[] typingBuf = new char[16];
-	public char[] otypingBuf = new char[16];
-	public boolean typing;
-	public String typed;
-	public int inputlen;
-	public int oinputlen;
-	
-	private final InputCallback inputCallback;
-	private final MenuProc confirmCallback;
-	
-	public MenuTextField(Object text, String input, BuildFont font, int x, int y, int width, final int charFlag, MenuProc confirmCallback) {
-		super(text, font);
-		
-		this.flags = 3 | 4;
-		this.m_pMenu = null;
-		
-		this.x = x;
-		this.y = y;
-		this.width = width;
-		this.typing = false;
-		
-		this.inputCallback = new InputCallback() {
-			@Override
-			public int run(int ch) {
-				if (ch == Keys.ESCAPE) 
-	                return -1;
+    public MenuTextField(Object text, String input, Font font, int x, int y, int width, final int charFlag, MenuProc confirmCallback) {
+        super(text, font);
 
-				if (ch == Keys.BACKSPACE) { 
-	            	if (inputlen == 0)
-	            		return 0;
-	            	inputlen--;
-	            	typingBuf[inputlen]=0;
-	            }
-				
-				if (ch == Keys.ENTER) 
-					return 1;
+        this.flags = 3 | 4;
+        this.m_pMenu = null;
 
-				if(BuildGdx.input.isKeyPressed(Keys.CONTROL_LEFT) && ch == Keys.V)
-				{
-					if(BuildGdx.app.getClipboard() != null) {
-						String content = BuildGdx.app.getClipboard().getContents();
-						for(int i = 0; i < content.length(); i++)
-							type(content.charAt(i), charFlag);
-					}
-					return 0;
-				}
+        this.x = x;
+        this.y = y;
+        this.width = width;
 
-				if(ch == KEY_NUMDECIMAL) ch = Keys.PERIOD;
-				if(ch >= Keys.NUMPAD_0 && ch <= Keys.NUMPAD_9)
-					ch = ch - Keys.NUMPAD_0 + Keys.NUM_0;
-				
-				type(getChar(ch), charFlag);
-				return 0;
-			}
-		};
-		this.typed = input;
-		inputlen = input.length();
-		System.arraycopy(input.toCharArray(), 0, typingBuf, 0, inputlen);
-		this.confirmCallback = confirmCallback;
-	}
-	
-	private void type(char ch, int charFlag) {
-		if (inputlen < 15 && ch != 0) {
-        	boolean canType;
-			canType = (isalpha(ch) && (charFlag & LETTERS) != 0)
-					|| (isdigit(ch) && (charFlag & NUMBERS) != 0)
-					|| (!isdigit(ch) && !isalpha(ch)
-					&& ((charFlag & SYMBOLS) != 0 || (charFlag & POINT) != 0 && ch == '.'));
+        this.prompt = new MenuPrompt(32, 32) {
+            @Override
+            public boolean isCharacterAllowed(char ch) {
+                return (isalpha(ch) && (charFlag & LETTERS) != 0)
+                        || (isdigit(ch) && (charFlag & NUMBERS) != 0)
+                        || (!isdigit(ch) && !isalpha(ch)
+                        && ((charFlag & SYMBOLS) != 0 || (charFlag & POINT) != 0 && ch == '.'));
+            }
+        };
+        prompt.setActionListener(i -> confirmCallback.run(menuHandler, MenuTextField.this));
+        prompt.setTextInput(input);
+    }
 
-        	if (canType) 
-        		typingBuf[inputlen++]= ch;
-    	}
-	}
-	
-	private char getChar(int ch)
-	{
-		if (ch < 128) 
-			return gdxscantoasc[ch];
-		return 0;
-	}
-	
-	@Override
-	public void draw(MenuHandler handler) {
-		if ( text != null )
-		{
-			int pal = handler.getPal(font, this);
-			int shade = handler.getShade(this);
-		    if ( !m_pMenu.mGetFocusedItem(this) )
-		     	typing = false;
+    public String getText() {
+        return prompt.getTextInput();
+    }
 
-		    font.drawText(x, y, text, shade, pal, TextAlign.Left, 2, fontShadow);
+    public void setText(String text) {
+        prompt.setTextInput(text);
+    }
 
-	    	int px = x + width - 1;
-			if(typing) {
-				shade = -128;
-				px -= 4;
-			}
+    @Override
+    public void draw(MenuHandler handler) {
+        if (text != null) {
+            int pal = handler.getPal(font, this);
+            int shade = handler.getShade(this);
 
-			font.drawText(px - font.getWidth(typingBuf), y, typingBuf, shade, pal, TextAlign.Left, 2, fontShadow);
-		    if(typing && (totalclock & 0x20) != 0) 
-		    	font.drawChar(px, y, '_', shade, pal, 2, false);
-		}
-		handler.mPostDraw(this);
-	}
+            font.drawTextScaled(handler.getRenderer(), x, y, text, 1.0f, shade, pal, TextAlign.Left, Transparent.None, ConvertType.Normal, fontShadow);
+            int px = x + width - 1;
+            if (prompt.isCaptured()) {
+                shade = -128;
+            }
 
-	@Override
-	public boolean callback(MenuHandler handler, MenuOpt opt) {
-		
-		if(typing) 
-		{
-			if(opt != MenuOpt.ESC) {
-				if(getInput().putMessage(inputCallback, true) == 1)
-				{
-					typed = new String(typingBuf, 0, inputlen);
-					typing = false;
-					
-					if(typed.isEmpty()) {
-						System.arraycopy(otypingBuf, 0, typingBuf, 0, 16);
-						inputlen = oinputlen;
-						return false;
-					}
-					
-					if(confirmCallback != null) 
-						confirmCallback.run(handler, this);	
-				}
-			} else {
-				System.arraycopy(otypingBuf, 0, typingBuf, 0, 16);
-				inputlen = oinputlen;
-				typing = false;
-			}
-		}
-		else
-		{
-			switch(opt)
-			{
-			case ENTER:
-			case LMB:
-				if ( (flags & 4) == 0 ) return false;
-				
-				getInput().initMessageInput(null);		
-				System.arraycopy(typingBuf, 0, otypingBuf, 0, 16);
-				oinputlen = inputlen;
-				typing = true;
-				break;
-			case ESC:
-			case RMB:
-				return true;
-			case UP:
-				m_pMenu.mNavUp();
-				return false;
-			case DW:
-				m_pMenu.mNavDown();
-				return false;
-			default: 
-				return false;
-			}
-		}
-		
-		return false;
-	}
+            drawPrompt(handler.getRenderer(), px, y, shade, pal);
+        }
+        handler.mPostDraw(this);
+    }
 
-	@Override
-	public boolean mouseAction(int mx, int my) {
-		if(text != null)
-		{
-			if(mx > x && mx < x + font.getWidth(text))
-				if(my > y && my < y + font.getHeight())
-					return true;
+    protected void drawPrompt(Renderer renderer, int pos, int y, int shade, int pal) {
+        final String input = prompt.getTextInput();
+        final int cursorPos = prompt.getCursorPosition();
+        int fptr = input.length() - 1;
+        int curX = pos;
 
-			if(mx > x + width - font.getWidth(typingBuf) && mx < x + width - 1)
-				return my > y && my < y + font.getHeight();
-		}
+        for (int i = fptr; i >= 0; i--) {
+            CharInfo charInfo = font.getCharInfo(input.charAt(i));
+            pos -= charInfo.getCellSize();
+            font.drawCharScaled(renderer, pos, y, input.charAt(i), 1.0f, shade, pal, Transparent.None, ConvertType.Normal, false);
+            if (i == cursorPos) {
+                curX = pos;
+            }
+        }
 
-		return false;
-	}
+        if (prompt.isCaptured() && (System.currentTimeMillis() & 0x100) == 0) {
+            char ch = '_';
+            if (prompt.isOsdOverType()) {
+                ch = '#';
+            }
+            font.drawCharScaled(renderer, curX, y, ch, 1.0f, shade, pal, Transparent.None, ConvertType.Normal, false);
+        }
+    }
 
-	@Override
-	public void open() {
+    @Override
+    public boolean callback(MenuHandler handler, MenuOpt opt) {
+        if (prompt.isCaptured()) {
+            return false;
+        }
+
+        switch (opt) {
+            case ESC:
+            case RMB:
+                return true;
+            case UP:
+                m_pMenu.mNavUp();
+                return false;
+            case DW:
+                m_pMenu.mNavDown();
+                return false;
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean mouseAction(int mx, int my) {
+        if (text != null) {
+            if (mx > x && mx < x + font.getWidth(text, 1.0f)) {
+                if (my > y && my < y + font.getSize()) {
+                    return true;
+                }
+            }
+
+            if (mx > x + width - font.getWidth(prompt.getTextInput(), 1.0f) && mx < x + width - 1) {
+                return my > y && my < y + font.getSize();
+            }
+        }
+
+        return false;
+    }
+
+    @Override
+    public void open() {
+    }
+
+    @Override
+    public void close() {
+        onCancel();
+    }
+
+    @Override
+    public boolean keyRepeat(int keycode) {
+        if (prompt.isCaptured()) {
+            return prompt.keyRepeat(keycode);
+        }
+        return false;
+    }
+
+    @Override
+    public boolean keyDown(int i) {
+        if (prompt.isCaptured()) {
+            switch (i) {
+                case Keys.ENTER:
+                case Keys.BUTTON_A:
+                    onConfirm();
+                    return true;
+                case Keys.ESCAPE:
+                    onCancel();
+                    return true;
+                default:
+                    return prompt.keyDown(i);
+            }
+        }
+
+        if (i == Keys.ENTER) {
+            onStartEdit();
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean keyUp(int i) {
+        prompt.keyUp(i);
+        return false;
+    }
+
+    @Override
+    public boolean keyTyped(char c) {
+        if (prompt.isCaptured()) {
+            prompt.keyTyped(c);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+        if (button == Input.Buttons.LEFT) {
+            if (!prompt.isCaptured()) {
+                onStartEdit();
+            }
+        } else if (button == Input.Buttons.RIGHT) {
+            onCancel();
+        }
+        return false;
+    }
+
+    @Override
+    public boolean mouseMoved(int mx, int my) {
+		return prompt.isCaptured();
 	}
 
-	@Override
-	public void close() {
-	}
+    public void onCancel() {
+        if (!prompt.isCaptured()) {
+            return;
+        }
+
+        prompt.setTextInput(oldInput);
+        prompt.setCaptureInput(false);
+    }
+
+    protected void onConfirm() {
+        prompt.onEnter();
+        prompt.setCaptureInput(false);
+    }
+
+    protected void onStartEdit() {
+        oldInput = prompt.getTextInput();
+        prompt.setCaptureInput(true);
+    }
 
 }

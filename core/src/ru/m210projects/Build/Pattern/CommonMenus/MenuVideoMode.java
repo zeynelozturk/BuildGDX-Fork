@@ -16,288 +16,242 @@
 
 package ru.m210projects.Build.Pattern.CommonMenus;
 
-import static ru.m210projects.Build.Engine.xdim;
-import static ru.m210projects.Build.Engine.ydim;
-import static ru.m210projects.Build.Strhandler.*;
-import static ru.m210projects.Build.Render.VideoMode.strvmodes;
-import static ru.m210projects.Build.Render.VideoMode.validmodes;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import ru.m210projects.Build.Architecture.BuildGdx;
-import ru.m210projects.Build.OnSceenDisplay.Console;
-import ru.m210projects.Build.Pattern.BuildFont;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Graphics;
+import ru.m210projects.Build.Architecture.common.ResolutionUtils;
 import ru.m210projects.Build.Pattern.BuildGame;
-import ru.m210projects.Build.Pattern.BuildFont.TextAlign;
-import ru.m210projects.Build.Pattern.MenuItems.BuildMenu;
-import ru.m210projects.Build.Pattern.MenuItems.MenuButton;
-import ru.m210projects.Build.Pattern.MenuItems.MenuConteiner;
-import ru.m210projects.Build.Pattern.MenuItems.MenuHandler;
-import ru.m210projects.Build.Pattern.MenuItems.MenuItem;
-import ru.m210projects.Build.Pattern.MenuItems.MenuList;
-import ru.m210projects.Build.Pattern.MenuItems.MenuProc;
-import ru.m210projects.Build.Pattern.MenuItems.MenuResolutionList;
-import ru.m210projects.Build.Pattern.MenuItems.MenuScroller;
-import ru.m210projects.Build.Pattern.MenuItems.MenuSwitch;
-import ru.m210projects.Build.Pattern.MenuItems.MenuTitle;
+import ru.m210projects.Build.Pattern.MenuItems.*;
 import ru.m210projects.Build.Pattern.MenuItems.MenuHandler.MenuOpt;
-import ru.m210projects.Build.Render.VideoMode;
 import ru.m210projects.Build.Render.Renderer.RenderType;
-import ru.m210projects.Build.Settings.BuildConfig;
+import ru.m210projects.Build.Types.ConvertType;
+import ru.m210projects.Build.Types.Transparent;
+import ru.m210projects.Build.Types.font.Font;
+import ru.m210projects.Build.Types.font.TextAlign;
+import ru.m210projects.Build.settings.GameConfig;
+
+import java.util.List;
 
 public abstract class MenuVideoMode extends BuildMenu {
 
-	protected MenuConteiner mResolution;
-	protected MenuConteiner mRenderer;
-	protected MenuButton mRenderSettings;
-	protected MenuSwitch mFullscreen;
-	protected MenuButton mApplyChanges;
-	protected MenuResolutionList mSlot;
-	protected MenuScroller slider;
+    protected final BuildMenu mResList;
+    protected final BuildMenu mRenSettingsMenu;
+    protected GameConfig config;
+    protected MenuConteiner mResolution;
+    protected MenuConteiner mRenderer;
+    protected MenuButton mRenderSettings;
+    protected MenuSwitch mFullscreen;
+    protected MenuButton mApplyChanges;
+    protected MenuResolutionList mSlot;
+    protected MenuScroller slider;
+    protected Graphics.DisplayMode currentMode;
+    protected boolean isFullscreen;
+    protected RenderType currentRender;
+    protected RenderType choosedRender;
 
-	protected VideoMode choosedMode;
-	protected VideoMode currentMode;
-	protected boolean isFullscreen;
-	protected RenderType currentRender;
-	protected RenderType choosedRender;
+    public MenuVideoMode(final BuildGame app, int posx, int posy, int width, int itemHeight, Font style, int nListItems, int nListWidth, int nBackground) {
+        super(app.pMenu);
+        this.config = app.pCfg;
+        addItem(getTitle(app, "Video mode"), false);
 
-	protected final BuildMenu mResList;
-	protected final BuildMenu mRenSettingsMenu;
+        final GameConfig cfg = app.pCfg;
+        MenuProc applyButtonCallback = (handler, pItem) -> Gdx.app.postRunnable(() -> {
+            Graphics.DisplayMode displayMode = mSlot.getSelectedMode();
 
+            if (currentRender != choosedRender) {
+                cfg.setRenderType(choosedRender);
+                currentRender = choosedRender;
+            } else {
+                cfg.setScreenMode(displayMode.width, displayMode.height, isFullscreen);
+            }
+        });
 
-	public abstract MenuTitle getTitle(BuildGame app, String text);
+        mResList = getResolutionListMenu(this, app, posx + (width - nListWidth) / 2, posy + 2 * style.getSize(), nListWidth, nListItems, style, nBackground);
 
-	public abstract void setMode(BuildConfig cfg);
+        mRenSettingsMenu = getRenSettingsMenu(app, posx, posy, width, itemHeight, style);
 
-	public BuildMenu getResolutionListMenu(final MenuVideoMode parent, final BuildGame app, int posx, int posy, int width, int nListItems, BuildFont style, int nListBackground) {
-		BuildMenu menu = new BuildMenu();
+        mResolution = new MenuConteiner("Resolution", style, posx,
+                posy += itemHeight, width, null, 0, null) {
+            @Override
+            public boolean callback(MenuHandler handler, MenuOpt opt) {
+                switch (opt) {
+                    case LEFT:
+                    case MWDW:
+                        if (mSlot.l_nFocus > 0) {
+                            mSlot.l_nFocus--;
+                        } else {
+                            mSlot.l_nFocus = 0;
+                        }
+                        return false;
+                    case RIGHT:
+                    case MWUP:
+                        if (mSlot.l_nFocus < mSlot.len - 1) {
+                            mSlot.l_nFocus++;
+                        } else {
+                            mSlot.l_nFocus = mSlot.len - 1;
+                        }
+                        return false;
+                    case ENTER:
+                    case LMB:
+                        handler.mOpen(mResList, -1);
+                        return false;
+                    default:
+                        return m_pMenu.mNavigation(opt);
+                }
+            }
 
-		menu.addItem(parent.getTitle(app, "Resolution"), false);
+            @Override
+            public void open() {
+                mSlot.open();
+                currentMode = mSlot.getSelectedMode();
+                num = mSlot.l_nFocus;
+            }
 
-		List<char[]> list = new ArrayList<char[]>();
-		if (strvmodes != null) {
-			for (int i = 0; i < strvmodes.length; i++)
-				list.add(strvmodes[i].toCharArray());
-		}
+            @Override
+            public void draw(MenuHandler handler) {
+                int px = x, py = y;
 
-		MenuProc callback = new MenuProc() {
-			@Override
-			public void run(MenuHandler handler, MenuItem pItem) {
-				final MenuList item = (MenuList) pItem;
-				if (item.l_nFocus == -1)
-					return;
+                String key = ResolutionUtils.getDisplayModeAsString(mSlot.getSelectedMode());
+                int pal = handler.getPal(font, this);
+                int shade = handler.getShade(this);
+                font.drawTextScaled(handler.getRenderer(), px, py, text, 1.0f, shade, pal, TextAlign.Left, Transparent.None, ConvertType.Normal, fontShadow);
 
-				BuildGdx.app.postRunnable(new Runnable() {
-					@Override
-					public void run() {
-						currentMode = choosedMode = validmodes.get(item.l_nFocus);
-						setMode(app.pCfg);
-						parent.mLoadRes(app.pMenu, MenuOpt.Open);
-						app.pMenu.mMenuBack();
-					}
-				});
-			}
-		};
+                listFont.drawTextScaled(handler.getRenderer(), x + width - 1, py, key, 1.0f, shade, handler.getPal(listFont, this), TextAlign.Right, Transparent.None, ConvertType.Normal, listShadow);
 
-		mSlot = new MenuResolutionList(app.pEngine, list, style, posx, posy, width, 1, null, callback, nListItems, nListBackground);
+                handler.mPostDraw(this);
+            }
+        };
 
-		slider = new MenuScroller(app.pSlider, mSlot, width + posx - app.pSlider.getScrollerWidth());
+        MenuProc renderCallback = (handler, pItem) -> Gdx.app.postRunnable(() -> {
+            MenuConteiner item = (MenuConteiner) pItem;
+            switch (item.num) {
+                case 0:
+                    choosedRender = RenderType.Software;
+                    break;
+                case 1:
+                    choosedRender = RenderType.Polymost;
+                    break;
+                case 2:
+                    choosedRender = RenderType.PolyGDX;
+                    break;
+            }
+        });
 
-		menu.addItem(mSlot, true);
-		menu.addItem(slider, false);
+        String[] renderers = new String[]{
+                RenderType.Software.getName(),
+                RenderType.Polymost.getName(),
+                RenderType.PolyGDX.getName()
+        };
+        mRenderer = new MenuConteiner("Renderer", style, posx, posy += itemHeight, width, renderers, 0, renderCallback) {
+            @Override
+            public void open() {
+                choosedRender = currentRender = app.getRenderer().getType();
+                switch (currentRender) {
+                    case Software:
+                        num = 0;
+                        break;
+                    case Polymost:
+                        num = 1;
+                        break;
+                    case PolyGDX:
+                        num = 2;
+                        break;
+                }
+            }
+        };
 
-		return menu;
-	}
+        mFullscreen = new MenuSwitch("Fullscreen", style, posx,
+                posy += itemHeight, width, cfg.isFullscreen(), new MenuProc() {
+            @Override
+            public void run(MenuHandler handler, MenuItem pItem) {
+                MenuSwitch sw = (MenuSwitch) pItem;
+                isFullscreen = sw.value;
+            }
+        }, null, null) {
+            @Override
+            public void open() {
+                value = isFullscreen = (cfg.isFullscreen());
+            }
 
-	public abstract MenuRendererSettings getRenSettingsMenu(final BuildGame app, int posx, int posy, int width, int nHeight, BuildFont style);
+            @Override
+            public void draw(MenuHandler handler) {
+                mCheckEnableItem(mSlot.l_nFocus != -1);
+                super.draw(handler);
+            }
+        };
 
-	public MenuVideoMode(final BuildGame app, int posx, int posy, int width, int itemHeight, BuildFont style, int nListItems, int nListWidth, int nBackground) {
+        mRenderSettings = new MenuButton("Renderer settings", style, posx, posy += itemHeight, width, 0, 0, mRenSettingsMenu, -1, null, 0);
 
-		addItem(getTitle(app, "Video mode"), false);
+        mApplyChanges = new MenuButton("Apply changes", style, 0, posy += 2 * itemHeight, 320, 1, 0, null, -1, applyButtonCallback, 0) {
+            @Override
+            public void draw(MenuHandler handler) {
+                mCheckEnableItem((!ResolutionUtils.getDisplayModeAsString(mSlot.getSelectedMode()).equalsIgnoreCase(ResolutionUtils.getDisplayModeAsString(currentMode)) || (isFullscreen != cfg.isFullscreen() && mSlot.l_nFocus != -1) || currentRender != choosedRender));
+                super.draw(handler);
+            }
 
-		final BuildConfig cfg = app.pCfg;
-		MenuProc callback = new MenuProc() {
-			@Override
-			public void run(MenuHandler handler, MenuItem pItem) {
-				BuildGdx.app.postRunnable(new Runnable() {
-					@Override
-					public void run() {
-						cfg.fullscreen = isFullscreen ? 1 : 0;
-						currentMode = choosedMode;
-						if(currentRender != choosedRender) {
-							app.pEngine.getrender().uninit();
-							if(app.pEngine.setrendermode(app.getFactory().renderer(choosedRender))) {
-								app.updateColorCorrection();
-								Console.Println("The render has been changed to " + choosedRender.getName());
-								cfg.renderType = app.pEngine.getrender().getType();
-								currentRender = choosedRender;
-							} else {
-								Console.Println("The render hasn't been changed!", Console.OSDTEXT_RED);
-								choosedRender = currentRender;
-								app.pEngine.setrendermode(app.getFactory().renderer(choosedRender));
-								mRenderer.open();
-							}
-						}
-						setMode(cfg);  //init new renderer is doing here
-					}
-				});
-				app.pInput.ctrlResetInput();
-			}
-		};
+            @Override
+            public void mCheckEnableItem(boolean nEnable) {
+                if (nEnable) {
+                    flags = 3 | 4;
+                } else {
+                    flags = 3;
+                }
+            }
+        };
 
-		mResList = getResolutionListMenu(this, app, posx + (width - nListWidth) / 2, posy + 2 * style.getHeight(), nListWidth, nListItems, style, nBackground);
+        addItem(mResolution, true);
+        addItem(mRenderer, false);
+        addItem(mFullscreen, false);
+        addItem(mRenderSettings, false);
+        addItem(mApplyChanges, false);
+    }
 
-		mRenSettingsMenu = getRenSettingsMenu(app, posx, posy, width, itemHeight, style);
+    public abstract MenuTitle getTitle(BuildGame app, String text);
 
-		mResolution = new MenuConteiner("Resolution", style, posx,
-				posy += itemHeight, width, strvmodes, 0, new MenuProc() {
-					@Override
-					public void run(MenuHandler handler, MenuItem pItem) {
-						MenuConteiner item = (MenuConteiner) pItem;
-						choosedMode = validmodes.get(item.num);
-					}
-				}) {
+//    public abstract void setDisplayMode(int width, int height);
 
-			@Override
-			public boolean callback(MenuHandler handler, MenuOpt opt) {
-				switch(opt)
-				{
-				case LEFT:
-				case MWDW:
-					if(list == null) return false;
-					if(num > 0) num--;
-					else num = 0;
-					if(callback != null)
-						callback.run(handler, this);
-					return false;
-				case RIGHT:
-				case MWUP:
-					if(list == null) return false;
-					if(num < list.length - 1) num++;
-					else num = list.length - 1;
-					if(callback != null)
-						callback.run(handler, this);
-					return false;
-				case ENTER:
-				case LMB:
-					handler.mOpen(mResList, -1);
-					return false;
-				default:
-					return m_pMenu.mNavigation(opt);
-				}
-			}
+    public BuildMenu getResolutionListMenu(final MenuVideoMode parent, final BuildGame app, int posx, int posy, int width, int nListItems, Font style, int nListBackground) {
+        BuildMenu menu = new BuildMenu(app.pMenu);
 
-			@Override
-			public void open() {
-				num = -1;
-				for (int m = 0; m < validmodes.size(); m++) {
-					if ((validmodes.get(m).xdim == xdim)
-							&& (validmodes.get(m).ydim == ydim)) {
-						num = m;
-						break;
-					}
-				}
+        menu.addItem(parent.getTitle(app, "Resolution"), false);
+        int bpp = Gdx.graphics.getDisplayMode().bitsPerPixel;
 
-				if (num != -1) {
-					currentMode = validmodes.get(num);
-					choosedMode = currentMode;
-				} else {
-					currentMode = new VideoMode(BuildGdx.graphics.getDisplayMode());
-				}
-			}
+        List<Graphics.DisplayMode> resolutions = ResolutionUtils.getBestDisplayModes(app.pCfg.getResolutions(), bpp);
 
-			@Override
-			public void draw(MenuHandler handler) {
-				int px = x, py = y;
+        MenuProc resolutionListApplyCallback = (handler, pItem) -> {
+            final MenuResolutionList item = (MenuResolutionList) pItem;
+            if (item.l_nFocus == -1) {
+                return;
+            }
 
-				char[] key;
-				if (num != -1 && list != null)
-					key = list[num];
-				else
-					key = toCharArray(cfg.ScreenWidth + " x " + cfg.ScreenHeight + " *");
+            Gdx.app.postRunnable(() -> {
+                Graphics.DisplayMode selectedMode = item.getSelectedMode();
+                app.pCfg.setScreenMode(selectedMode.width, selectedMode.height, app.pCfg.isFullscreen());
+                parent.mLoadRes(app.pMenu, MenuOpt.Open);
+                app.pMenu.mMenuBack();
+            });
+        };
 
-				int pal = handler.getPal(font, this);
-				int shade = handler.getShade(this);
-				font.drawText(px, py, text, shade, pal, TextAlign.Left, 2, fontShadow);
+        mSlot = new MenuResolutionList(app, resolutions, style, posx, posy, width, 1, resolutionListApplyCallback, nListItems, nListBackground);
 
-				if(key == null) return;
+        slider = new MenuScroller(app.pSlider, mSlot, width + posx - app.pSlider.getScrollerWidth());
 
-				listFont.drawText(x + width - 1 - listFont.getWidth(key), py, key, shade, handler.getPal(listFont, this), TextAlign.Left, 2, listShadow);
+        menu.addItem(mSlot, true);
+        menu.addItem(slider, false);
 
-				handler.mPostDraw(this);
-			}
-		};
+        return menu;
+    }
 
-		MenuProc renderCallback = new MenuProc() {
-			@Override
-			public void run(MenuHandler handler, final MenuItem pItem) {
-				BuildGdx.app.postRunnable(new Runnable() {
-					@Override
-					public void run() {
-						MenuConteiner item = (MenuConteiner) pItem;
-						switch(item.num) {
-							case 0: choosedRender = RenderType.Software; break;
-							case 1: choosedRender = RenderType.Polymost; break;
-							case 2: choosedRender = RenderType.PolyGDX; break;
-						}
-					}
-				});
-			}
-		};
+    public abstract MenuRendererSettings getRenSettingsMenu(final BuildGame app, int posx, int posy, int width, int nHeight, Font style);
 
-		String[] renderers = new String[] {
-			RenderType.Software.getName(),
-			RenderType.Polymost.getName(),
-			RenderType.PolyGDX.getName()
-		};
-		mRenderer = new MenuConteiner("Renderer", style, posx, posy += itemHeight, width, renderers, 0, renderCallback) {
-			@Override
-			public void open() {
-				choosedRender = currentRender = app.pEngine.getrender().getType();
-				switch(currentRender) {
-					case Software: num = 0; break;
-					case Polymost: num = 1; break;
-					case PolyGDX: num = 2; break;
-				}
-			}
-		};
+    public void onResize(int width, int height) {
+        // reinit resolution
+//        currentMode = ResolutionUtils.getDisplayModeAsString(width, height);
+        mResolution.open();
+    }
 
-		mFullscreen = new MenuSwitch("Fullscreen", style, posx,
-				posy += itemHeight, width, cfg.fullscreen == 1, new MenuProc() {
-					@Override
-					public void run(MenuHandler handler, MenuItem pItem) {
-						MenuSwitch sw = (MenuSwitch) pItem;
-						isFullscreen = sw.value;
-					}
-				}, null, null) {
-			@Override
-			public void open() {
-				value = isFullscreen = (cfg.fullscreen == 1);
-			}
-		};
+    public void onRenderChanged(RenderType renderType) {
+        int bpp = Gdx.graphics.getDisplayMode().bitsPerPixel;
 
-		mRenderSettings = new MenuButton("Renderer settings", style, posx, posy += itemHeight, width, 0, 0, mRenSettingsMenu, -1, null, 0);
-
-		mApplyChanges = new MenuButton("Apply changes", style, 0, posy += 2 * itemHeight, 320, 1, 0, null, -1, callback, 0) {
-			@Override
-			public void draw(MenuHandler handler) {
-				mCheckEnableItem(choosedMode != null && (choosedMode != currentMode || isFullscreen != (cfg.fullscreen == 1) || currentRender != choosedRender));
-				super.draw(handler);
-			}
-
-			@Override
-			public void mCheckEnableItem(boolean nEnable) {
-				if (nEnable)
-					flags = 3 | 4;
-				else flags = 3;
-			}
-		};
-
-		addItem(mResolution, true);
-		addItem(mRenderer, false);
-		addItem(mFullscreen, false);
-		addItem(mRenderSettings, false);
-		addItem(mApplyChanges, false);
-	}
+        mSlot.setDisplayModes(ResolutionUtils.getBestDisplayModes(config.getResolutions(), bpp));
+    }
 }

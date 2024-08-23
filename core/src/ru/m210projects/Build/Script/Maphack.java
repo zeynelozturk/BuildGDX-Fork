@@ -21,14 +21,17 @@ import java.util.Map;
 
 import static ru.m210projects.Build.Engine.*;
 import static ru.m210projects.Build.Strhandler.toLowerCase;
+import static ru.m210projects.Build.filehandle.fs.Directory.DUMMY_ENTRY;
 
-import ru.m210projects.Build.Architecture.BuildGdx;
+import com.badlogic.gdx.utils.Array;
 import ru.m210projects.Build.Render.Types.Spriteext;
+import ru.m210projects.Build.Types.collections.DynamicArray;
+import ru.m210projects.Build.filehandle.Entry;
 
 public class Maphack extends Scriptfile {
 
 	private long MapCRC;
-	private final Spriteext[] spriteext;
+	private final Array<Spriteext> spriteext = new DynamicArray<>(MAXSPRITESV7, Spriteext.class);
 
 	private enum Token {
 		MapCRC, Sprite,
@@ -58,56 +61,54 @@ public class Maphack extends Scriptfile {
 	};
 
 	public Maphack() { // new maphack
-		super("", new byte[0]);
-
-		spriteext = new Spriteext[MAXSPRITES + MAXUNIQHUDID];
-		for (int i = 0; i < spriteext.length; i++)
-			spriteext[i] = new Spriteext();
+		super("", DUMMY_ENTRY);
 	}
 
-	public Maphack(String filename) {
-		super(filename, BuildGdx.cache.getBytes(filename, 0));
-
-		spriteext = new Spriteext[MAXSPRITES + MAXUNIQHUDID];
-		for (int i = 0; i < spriteext.length; i++)
-			spriteext[i] = new Spriteext();
+	public Maphack(Entry entry) {
+		super(entry.getName(), entry);
 
 		Integer value;
 		while (true) {
 			switch (gettoken(basetokens)) {
 			case MapCRC:
 				Integer crc32 = getsymbol();
-				if (crc32 == null)
+				if (crc32 == null) {
 					break;
+				}
 
 				MapCRC = crc32 & 0xFFFFFFFFL;
 				break;
 			case Sprite:
 				Integer sprnum = getsymbol();
-				if (sprnum == null)
+				if (sprnum == null) {
 					break;
+				}
 
 				switch (gettoken(sprite_tokens)) {
 				default:
 					break;
 				case AngleOffset:
-					if ((value = getsymbol()) != null)
-						spriteext[sprnum].angoff = value.shortValue();
+					if ((value = getsymbol()) != null) {
+						spriteext.get(sprnum).angoff = value.shortValue();
+					}
 					break;
 				case XOffset:
-					if ((value = getsymbol()) != null)
-						spriteext[sprnum].xoff = value;
+					if ((value = getsymbol()) != null) {
+						spriteext.get(sprnum).xoff = value;
+					}
 					break;
 				case YOffset:
-					if ((value = getsymbol()) != null)
-						spriteext[sprnum].yoff = value;
+					if ((value = getsymbol()) != null) {
+						spriteext.get(sprnum).yoff = value;
+					}
 					break;
 				case ZOffset:
-					if ((value = getsymbol()) != null)
-						spriteext[sprnum].zoff = value;
+					if ((value = getsymbol()) != null) {
+						spriteext.get(sprnum).zoff = value;
+					}
 					break;
 				case NoModel:
-					spriteext[sprnum].flags |= 1; // SPREXT_NOTMD;
+					spriteext.get(sprnum).flags |= 1; // SPREXT_NOTMD;
 					break;
 				}
 
@@ -124,21 +125,24 @@ public class Maphack extends Scriptfile {
 
 	private Token gettoken(Map<String, Token> list) {
 		int tok;
-		if ((tok = gettoken()) == -2)
+		if ((tok = gettoken()) == -2) {
 			return Token.EOF;
+		}
 
 		Token out = list.get(toLowerCase(textbuf.substring(tok, textptr)));
-		if (out != null)
+		if (out != null) {
 			return out;
+		}
 
 		errorptr = textptr;
 		return Token.Error;
 	}
 
 	public Spriteext getSpriteInfo(int spriteid) {
-		if (spriteid < 0 || spriteid >= spriteext.length)
+		if (spriteid < 0 || spriteid >= spriteext.size) {
 			return null;
-		return spriteext[spriteid];
+		}
+		return spriteext.items[spriteid];
 	}
 
 	public long getMapCRC() {

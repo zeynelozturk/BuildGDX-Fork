@@ -16,13 +16,15 @@
 
 package ru.m210projects.Build.Pattern.MenuItems;
 
-import ru.m210projects.Build.Pattern.BuildFont;
-import ru.m210projects.Build.Pattern.BuildFont.TextAlign;
 import ru.m210projects.Build.Pattern.MenuItems.MenuHandler.MenuOpt;
+import ru.m210projects.Build.Types.ConvertType;
+import ru.m210projects.Build.Types.Transparent;
+import ru.m210projects.Build.Types.font.Font;
+import ru.m210projects.Build.Types.font.TextAlign;
 
 public class MenuText extends MenuItem
 {
-	public MenuText(Object text, BuildFont font, int x, int y, int align) {
+	public MenuText(Object text, Font font, int x, int y, int align) {
 		super(text, font);
 		this.flags = 1;
 
@@ -37,14 +39,21 @@ public class MenuText extends MenuItem
 		if ( text != null )
 		{
 		    int px = x;
-		    if(align == 1) 
-		        px = width / 2 + x - font.getWidth(text) / 2;
-		    if(align == 2) 
-		        px = x + width - 1 - font.getWidth(text);
+		    if(align == 1) {
+				px = width / 2 + x - font.getWidth(text, 1.0f) / 2;
+			}
+		    if(align == 2) {
+				px = x + width - 1 - font.getWidth(text, 1.0f);
+			}
 
-		    font.drawText(px, y, text, -128, pal, TextAlign.Left, 2, fontShadow);
+		    font.drawTextScaled(handler.getRenderer(), px, y, text, 1.0f,-128, pal, TextAlign.Left, Transparent.None, ConvertType.Normal, fontShadow);
 		}
 		handler.mPostDraw(this);
+	}
+
+	public MenuText setFontShadow(boolean shadow) {
+		this.fontShadow = shadow;
+		return this;
 	}
 
 	@Override

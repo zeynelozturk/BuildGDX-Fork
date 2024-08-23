@@ -16,276 +16,273 @@
 
 package ru.m210projects.Build.Pattern.ScreenAdapters;
 
-import static ru.m210projects.Build.Net.Mmulti.uninitmultiplayer;
-import static ru.m210projects.Build.OnSceenDisplay.Console.OSDTEXT_RED;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.ScreenAdapter;
+import ru.m210projects.Build.Architecture.DialogUtil;
+import ru.m210projects.Build.Architecture.MessageType;
+import ru.m210projects.Build.Engine;
+import ru.m210projects.Build.Pattern.BuildFactory;
+import ru.m210projects.Build.Pattern.BuildGame;
+import ru.m210projects.Build.Pattern.Tools.Interpolation;
+import ru.m210projects.Build.Pattern.Tools.SaveManager;
+import ru.m210projects.Build.Render.Renderer;
+import ru.m210projects.Build.Render.TexFilter;
+import ru.m210projects.Build.Types.MemLog;
+import ru.m210projects.Build.exceptions.InitializationException;
+import ru.m210projects.Build.filehandle.Entry;
+import ru.m210projects.Build.filehandle.Group;
+import ru.m210projects.Build.filehandle.fs.Directory;
+import ru.m210projects.Build.osd.CommandResponse;
+import ru.m210projects.Build.osd.Console;
+import ru.m210projects.Build.osd.OsdColor;
+import ru.m210projects.Build.osd.commands.OsdCommand;
+import ru.m210projects.Build.osd.commands.OsdValueRange;
+import ru.m210projects.Build.settings.GameConfig;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 
-import com.badlogic.gdx.ScreenAdapter;
-
-import ru.m210projects.Build.Engine;
-import ru.m210projects.Build.Architecture.BuildGdx;
-import ru.m210projects.Build.Architecture.BuildMessage.MessageType;
-import ru.m210projects.Build.Audio.BuildAudio.Driver;
-import ru.m210projects.Build.FileHandle.Compat.Path;
-import ru.m210projects.Build.FileHandle.DirectoryEntry;
-import ru.m210projects.Build.FileHandle.Group;
-import ru.m210projects.Build.FileHandle.GroupResource;
-import ru.m210projects.Build.OnSceenDisplay.Console;
-import ru.m210projects.Build.OnSceenDisplay.OSDCOMMAND;
-import ru.m210projects.Build.OnSceenDisplay.OSDCVARFUNC;
-import ru.m210projects.Build.Pattern.BuildEngine;
-import ru.m210projects.Build.Pattern.BuildGame;
-import ru.m210projects.Build.Pattern.Tools.Interpolation;
-import ru.m210projects.Build.Pattern.Tools.SaveManager;
-import ru.m210projects.Build.Render.Renderer.RenderType;
-import ru.m210projects.Build.Settings.BuildConfig;
-import ru.m210projects.Build.Settings.BuildSettings;
-import ru.m210projects.Build.Settings.GLSettings;
-import ru.m210projects.Build.Settings.BuildConfig.GameKeys;
-import ru.m210projects.Build.Types.MemLog;
-import ru.m210projects.Build.Pattern.BuildFactory;
+import static ru.m210projects.Build.net.Mmulti.uninitmultiplayer;
+import static ru.m210projects.Build.filehandle.CacheResourceMap.CachePriority.NORMAL;
 
 public class InitScreen extends ScreenAdapter {
 
-	private int frames;
-	private BuildEngine engine;
-	private final BuildFactory factory;
-	private Thread thread;
-	private final BuildGame game;
-	private boolean gameInitialized;
-	private boolean disposing;
+    private final BuildFactory factory;
+    private final BuildGame game;
+    private int frames;
+    private Engine engine;
+    private Thread thread;
+    private boolean gameInitialized;
+    private boolean disposing;
 
-	@Override
-	public void show() {
-		frames = 0;
-		Console.fullscreen(true);
-		gameInitialized = false;
-		disposing = false;
-	}
+    public InitScreen(final BuildGame game) {
+        this.game = game;
 
-	@Override
-	public void hide() {
-		Console.fullscreen(false);
-	}
+        GameConfig cfg = game.pCfg;
+        factory = game.getFactory();
 
-	private void ConsoleInit() {
-		Console.RegisterCvar(new OSDCOMMAND("memusage", "mem usage / total", new OSDCVARFUNC() {
-			@Override
-			public void execute() {
-				Console.Println("Memory used: " + MemLog.used() + " / " + MemLog.total() + " mb");
-			}
-		}));
+        Directory gameDirectory = game.cache.getGameDirectory();
 
-		Console.RegisterCvar(new OSDCOMMAND("net_bufferjitter", "net_bufferjitter", new OSDCVARFUNC() {
-			@Override
-			public void execute() {
-				Console.Println("bufferjitter: " + game.pNet.bufferJitter);
-			}
-		}));
+        Console.out.println("BUILD engine by Ken Silverman (http://www.advsys.net/ken) \r\n" + game.getTitle() + "(BuildGdx v" + Engine.version + ") by [M210�] (http://m210.duke4.net)");
 
-		Console.RegisterCvar(new OSDCOMMAND("deb_filelist", "deb_filelist", new OSDCVARFUNC() {
-			@Override
-			public void execute() {
-				for (Group g : BuildGdx.cache.getGroupList()) {
-					Console.Println("group: " + g.name);
-					for (GroupResource res : g.getList()) {
-						Console.Println("\t   file: " + res.getFullName());
-					}
-				}
-			}
-		}));
+        Console.out.println("Current date " + game.date.getLaunchDate());
 
-		Console.RegisterCvar(new OSDCOMMAND("quit", null, new OSDCVARFUNC() {
-			@Override
-			public void execute() {
-				game.gExit = true;
-			}
-		}));
-	}
+        String osver = System.getProperty("os.version");
+        String jrever = System.getProperty("java.version");
 
-	public InitScreen(final BuildGame game) {
-		this.game = game;
-		BuildConfig cfg = game.pCfg;
-		factory = game.getFactory();
+        Console.out.println("Running on " + game.OS + " (version " + osver + ")");
+        Console.out.println("\t with JRE version: " + jrever + "\r\n");
 
-		Console.SetLogFile(game.appname + ".log");
+        Console.out.println("Initializing resource archives");
 
-		Console.Println("BUILD engine by Ken Silverman (http://www.advsys.net/ken) \r\n" + game.appname + " "
-				+ game.sversion + "(BuildGdx v" + Engine.version + ") by [M210�] (http://m210.duke4.net)");
+        try {
+            for (String res : factory.resources) {
+                Entry entry = gameDirectory.getEntry(res);
+                if (entry.exists() && !entry.isDirectory()) {
+                    game.cache.addGroup(entry, NORMAL);
+                }
+            }
 
-		Console.Println("Current date " + game.date.getLaunchDate());
+            Console.out.println("Initializing Build 3D engine");
+            this.engine = game.pEngine = factory.engine();
+        } catch (Exception e) {
+            e.printStackTrace();
+            DialogUtil.showMessage("Build Engine Initialization Error!",
+            String.format("There was a problem initialising the Build engine:\r\n%s\r\nat %s", e, e.getStackTrace()[0]),
+            MessageType.Info);
+            System.exit(1);
+            return;
+        }
 
-		String osver = System.getProperty("os.version");
-		String jrever = System.getProperty("java.version");
+        if (engine.loadpics() == 0) {
+            DialogUtil.showMessage("Build Engine Initialization Error!",
+                    "ART files not found " + gameDirectory.getPath().resolve(engine.getTileManager().getTilesPath()),
+                    MessageType.Info);
+            System.exit(1);
+            return;
+        }
 
-		Console.Println("Running on " + game.OS + " (version " + osver + ")");
-		Console.Println("\t with JRE version: " + jrever + "\r\n");
+        game.pFonts = factory.fonts();
+        game.initRenderer();
+        game.pInt = new Interpolation();
+        game.pSavemgr = new SaveManager();
 
-		Console.Println("Initializing resource archives");
+        if (cfg.isAutoloadFolder()) {
+            Entry entry = gameDirectory.getEntry("autoload");
+            if (!entry.exists()) {
+                File f = new File(gameDirectory.getPath().resolve("autoload").toString());
+                if (!f.exists() && !f.mkdirs() && !f.isDirectory()) {
+                    Console.out.println("Can't create autoload folder", OsdColor.RED);
+                }
+            }
+        }
 
-		for (int i = 0; i < factory.resources.length; i++) {
-			try {
-				BuildGdx.cache.add(factory.resources[i]);
-//				if(BuildGdx.cache.add(factory.resources[i]) == null)
-//					throw new Exception("Can't load package " + factory.resources[i]);
-			} catch (Exception e) {
-				BuildGdx.message.show("Init error!", "Resource initialization error! \r\n" + e.getMessage(),
-						MessageType.Info);
-				System.exit(1);
-				return;
-			}
-		}
+        thread = new Thread(() -> {
+            try {
+                game.pNet = factory.net();
+                game.pSlider = factory.slider();
+                game.pMenu = factory.menus();
+                game.baseDef = factory.getBaseDef(engine);
 
-		try {
-			Console.Println("Initializing Build 3D engine");
-			this.engine = game.pEngine = factory.engine();
-		} catch (Exception e) {
-			BuildGdx.message.show("Build Engine Initialization Error!",
-					"There was a problem initialising the Build engine: \r\n" + e.getMessage(), MessageType.Info);
-			System.exit(1);
-			return;
-		}
+                uninitmultiplayer();
+                gameInitialized = game.init();
 
-		game.pInt = new Interpolation();
-		game.pSavemgr = new SaveManager();
+                ConsoleInit();
+            } catch (InitializationException ie) {
+                ie.printStackTrace();
 
-		Console.setFunction(factory.console());
-		Console.ResizeDisplay(cfg.ScreenWidth, cfg.ScreenHeight);
+                Console.out.println(ie.getMessage(), OsdColor.RED);
+                DialogUtil.showMessage("Initialization exception!", ie.getMessage(), MessageType.Info);
+                System.exit(1);
+            } catch (OutOfMemoryError me) {
+                me.printStackTrace();
 
-		if (engine.loadpics() == 0) {
-			BuildGdx.message.show("Build Engine Initialization Error!",
-					"ART files not found " + new File(Path.Game.getPath() + engine.tilesPath).getAbsolutePath(),
-					MessageType.Info);
-			System.exit(1);
-			return;
-		}
+                String message = "Memory used: [ " + MemLog.used() + " / " + MemLog.total()
+                        + " mb ] \r\nPlease, increase the java's heap size.";
+                Console.out.println(message, OsdColor.RED);
+                DialogUtil.showMessage("OutOfMemory!", message, MessageType.Info);
+                System.exit(1);
+            } catch (FileNotFoundException fe) {
+                fe.printStackTrace();
+                String message = fe.toString();
+                Console.out.println(message, OsdColor.RED);
+                DialogUtil.showMessage("File not found!", message, MessageType.Info);
+                System.exit(1);
+            } catch (Throwable e) {
+                if (!disposing) {
+                    game.ThrowError("InitScreen error " + "[" + e.getClass().getSimpleName() + "]: ", e.getStackTrace());
+                    System.exit(1);
+                }
+            }
+        });
+        thread.setName("InitEngine thread");
+        thread.setDaemon(true); // to make the thread as background process and kill it if the app was closed
+    }
 
-		game.pFonts = factory.fonts();
+    @Override
+    public void show() {
+        frames = 0;
+        Console.out.setFullscreen(true);
+        gameInitialized = false;
+        disposing = false;
+    }
 
-		BuildSettings.init(engine, cfg);
-		GLSettings.init(engine, cfg);
+    @Override
+    public void hide() {
+        Console.out.setFullscreen(false);
+    }
 
-		if(!engine.setrendermode(factory.renderer(cfg.renderType))) {
-			engine.setrendermode(factory.renderer(RenderType.Software));
-			cfg.renderType = RenderType.Software;
-		}
+    private void ConsoleInit() {
+        Console.out.registerCommand(new OsdValueRange("r_texturemode", "", 0, 2) {
 
-		if (!engine.setgamemode(cfg.fullscreen, cfg.ScreenWidth, cfg.ScreenHeight))
-			cfg.fullscreen = 0;
+            @Override
+            public String getDescription() {
+                return "Current texturing mode is " + game.pCfg.getGlfilter().name();
+            }
 
-		if(cfg.autoloadFolder) {
-			DirectoryEntry autoloadDir = BuildGdx.compat.checkDirectory("autoload");
-			if(autoloadDir == null) { // not found
-				File f = new File(Path.Game.getPath() + File.separator + "autoload");
-				if(!f.exists() && !f.mkdirs() && !f.isDirectory())
-					Console.Println("Can't create autoload folder", OSDTEXT_RED);
-			}
-		}
+            @Override
+            protected void setCheckedValue(float value) {
+                game.pCfg.setGlfilter(TexFilter.valueOf((int) value));
+            }
+        });
 
-		thread = new Thread(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					BuildConfig cfg = game.pCfg;
-					cfg.InitKeymap();
-					if (!cfg.isInited)
-						cfg.isInited = cfg.InitConfig(!cfg.isExist());
+        Console.out.registerCommand(new OsdValueRange("r_detailmapping", "r_detailmapping: use detail textures", 0, 1) {
+            @Override
+            public float getValue() {
+                return game.pCfg.isDetailMapping() ? 1 : 0;
+            }
 
-					game.pNet = factory.net();
-					game.pInput = factory.input(BuildGdx.controllers.init());
-					game.pSlider = factory.slider();
-					game.pMenu = factory.menus();
-					game.baseDef = factory.getBaseDef(engine);
+            @Override
+            protected void setCheckedValue(float value) {
+                game.pCfg.setDetailMapping(value != 0);
+            }
+        });
 
-					uninitmultiplayer();
+        Console.out.registerCommand(new OsdValueRange("r_glowmapping", "r_detailmapping: use detail textures", 0, 1) {
+            @Override
+            public float getValue() {
+                return game.pCfg.isGlowMapping() ? 1 : 0;
+            }
 
-					cfg.snddrv = BuildGdx.audio.checkNum(Driver.Sound, cfg.snddrv);
-					cfg.middrv = BuildGdx.audio.checkNum(Driver.Music, cfg.middrv);
+            @Override
+            protected void setCheckedValue(float value) {
+                game.pCfg.setGlowMapping(value != 0);
+            }
+        });
 
-					BuildGdx.audio.setDriver(Driver.Sound, cfg.snddrv);
-					BuildGdx.audio.setDriver(Driver.Music, cfg.middrv);
+        Console.out.registerCommand(new OsdCommand("memusage", "mem usage / total") {
+            @Override
+            public CommandResponse execute(String[] argv) {
+                Console.out.println("Memory used: " + MemLog.used() + " / " + MemLog.total() + " mb");
+                return CommandResponse.SILENT_RESPONSE;
+            }
+        });
 
-					int consolekey = GameKeys.Show_Console.getNum();
-					if (consolekey != -1) {
-						Console.setCaptureKey(cfg.primarykeys[consolekey], 0);
-						Console.setCaptureKey(cfg.secondkeys[consolekey], 1);
-						Console.setCaptureKey(cfg.mousekeys[consolekey], 2);
-						Console.setCaptureKey(cfg.gpadkeys[consolekey], 3);
-					}
+        Console.out.registerCommand(new OsdCommand("net_bufferjitter", "net_bufferjitter") {
+            @Override
+            public CommandResponse execute(String[] argv) {
+                Console.out.println("bufferjitter: " + game.pNet.bufferJitter);
+                return CommandResponse.SILENT_RESPONSE;
+            }
+        });
 
-					BuildSettings.usenewaspect.set(cfg.widescreen == 1);
-					BuildSettings.fov.set(cfg.gFov);
-					BuildSettings.fpsLimit.set(cfg.fpslimit);
+        Console.out.registerCommand(new OsdCommand("deb_filelist", "deb_filelist") {
+            @Override
+            public CommandResponse execute(String[] argv) {
+                for (Group g : game.cache.getGroups()) {
+                    Console.out.println(String.format("group: \"%s\" priority: %s", g.getName(), game.cache.getPriority(g)), OsdColor.BLUE);
+                    for (Entry res : g.getEntries()) {
+                        String descr;
+                        if (res.isDirectory()) {
+                            descr = "directory";
+                        } else {
+                            descr = "file";
+                        }
+                        Console.out.println(String.format("\t    %s: \"%s\"", descr, res));
+                    }
+                }
+                return CommandResponse.SILENT_RESPONSE;
+            }
+        });
 
-//					BuildGdx.threads = new ThreadProcessor();
+        Console.out.registerCommand(new OsdCommand("quit", "") {
+            @Override
+            public CommandResponse execute(String[] argv) {
+                game.gExit = true;
+                return CommandResponse.SILENT_RESPONSE;
+            }
+        });
+    }
 
-					gameInitialized = game.init();
+    public void start() {
+        if (thread != null) {
+            thread.start();
+        }
+    }
 
-					ConsoleInit();
-				} catch (OutOfMemoryError me) {
-					System.gc();
+    @Override
+    public synchronized void dispose() {
+        disposing = true;
+    }
 
-					me.printStackTrace();
-					String message = "Memory used: [ " + MemLog.used() + " / " + MemLog.total()
-							+ " mb ] \r\nPlease, increase the java's heap size.";
-					Console.Println(message, Console.OSDTEXT_RED);
-					BuildGdx.message.show("OutOfMemory!", message, MessageType.Info);
-					System.exit(1);
-				} catch (FileNotFoundException fe) {
-					fe.printStackTrace();
+    @Override
+    public synchronized void render(float delta) {
+        Renderer renderer = game.getRenderer();
+        if (!disposing && renderer.isInited()) { // don't draw anything after disposed
+            renderer.clearview(0);
+            factory.drawInitScreen();
 
-					String message = fe.getMessage();
-					Console.Println(message, Console.OSDTEXT_RED);
-					BuildGdx.message.show("File not found!", message, MessageType.Info);
-					System.exit(1);
-				} catch (Throwable e) {
-					if (!disposing) {
-						game.ThrowError("InitScreen error", e);
-						System.exit(1);
-					}
-				}
-			}
-		});
-		thread.setName("InitEngine thread");
-		thread.setDaemon(true); // to make the thread as background process and kill it if the app was closed
-	}
-
-	public void start() {
-		if (thread != null)
-			thread.start();
-	}
-
-	@Override
-	public void dispose() {
-		synchronized (Engine.lock) {
-			disposing = true;
-		}
-	}
-
-	@Override
-	public void render(float delta) {
-		synchronized (Engine.lock) {
-			if (!disposing && engine.getrender().isInited()) { // don't draw anything after disposed
-				engine.clearview(0);
-
-//				engine.rotatesprite(0, 0, 65536, 0, factory.getInitTile(), -128, 0, 10 | 16, 0, 0, xdim - 1, ydim - 1);
-
-				factory.drawInitScreen();
-
-				if (frames++ > 3) {
-					if (!thread.isAlive()) {
-						if (gameInitialized)
-							game.show();
-						else {
-							game.GameMessage("InitScreen unknown error!");
-							BuildGdx.app.exit();
-						}
-					}
-				}
-				engine.nextpage();
-			}
-		}
-	}
+            if (frames++ > 3) {
+                if (!thread.isAlive()) {
+                    if (gameInitialized) {
+                        game.show();
+                    } else {
+                        DialogUtil.showMessage("Initialization Error", "InitScreen unknown error!", MessageType.Error);
+                        Gdx.app.exit();
+                    }
+                }
+            }
+            Console.out.draw();
+        }
+    }
 }

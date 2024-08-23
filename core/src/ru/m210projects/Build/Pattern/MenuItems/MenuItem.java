@@ -20,20 +20,22 @@ import static ru.m210projects.Build.Gameutils.coordsConvertXScaled;
 import static ru.m210projects.Build.Gameutils.coordsConvertYScaled;
 
 import ru.m210projects.Build.Engine;
-import ru.m210projects.Build.Gameutils.ConvertType;
-import ru.m210projects.Build.Pattern.BuildFont;
 import ru.m210projects.Build.Pattern.MenuItems.MenuHandler.MenuOpt;
+import ru.m210projects.Build.Render.Renderer;
+import ru.m210projects.Build.Types.ConvertType;
+import ru.m210projects.Build.Types.font.Font;
 
 public abstract class MenuItem {
 	
-	public FocusListener listener;
+	protected FocusListener listener;
 	protected interface FocusListener {
 		boolean isFocused();
 	}
 
 	public BuildMenu m_pMenu;
+	MenuHandler menuHandler; // controller
 	public char[] text;          
-	public BuildFont font;     
+	public Font font;
 	public boolean fontShadow;
 	public int x = 0;              
 	public int y = 0;             
@@ -42,27 +44,25 @@ public abstract class MenuItem {
 	public int pal = 0;
 	public int align;
 	
-	public MenuItem(Object text, BuildFont textStyle) {
+	public MenuItem(Object text, Font textStyle) {
 		if(text != null) {
-			if(text instanceof String) 
+			if(text instanceof String) {
 				this.text = ((String)text).toCharArray();
-			else if(text instanceof char[])
+			} else if(text instanceof char[]) {
 				this.text = (char[]) text;
+			}
 		}
 		this.font = textStyle;
 		
-		listener = new FocusListener() {
-			@Override
-			public boolean isFocused() {
-				return m_pMenu.mGetFocusedItem(MenuItem.this);
-			}	
-		};
+		listener = () -> m_pMenu.mGetFocusedItem(MenuItem.this);
 	}
 	
 	public void mCheckEnableItem(boolean nEnable) {
-		if (nEnable) 
+		if (nEnable) {
 			flags = 3 | 4;
-		else flags = 1;
+		} else {
+			flags = 1;
+		}
 	}
 	
 	public boolean isEnabled()
@@ -74,21 +74,24 @@ public abstract class MenuItem {
 		return listener.isFocused();
 	}
 	
-	public void dbDrawDimensions(Engine draw, int col)
+	public void dbDrawDimensions(Renderer renderer, int col)
 	{
 		int x = coordsConvertXScaled(this.x - 1, ConvertType.Normal);
 		int y = coordsConvertYScaled(this.y - 1);
 		int x2 = coordsConvertXScaled(this.x + width + 1, ConvertType.Normal);
-		int y2 = coordsConvertYScaled(this.y + font.getHeight() + 1);
+		int y2 = coordsConvertYScaled(this.y + font.getSize() + 1);
 		
-		draw.getrender().drawline256(x * 4096, y * 4096, x2 * 4096, y * 4096, col);
-		draw.getrender().drawline256(x * 4096, y2 * 4096, x2 * 4096, y2 * 4096, col);
-		draw.getrender().drawline256(x * 4096, y * 4096, x * 4096, y2 * 4096, col);
-		draw.getrender().drawline256(x2 * 4096, y * 4096, x2 * 4096, y2 * 4096, col);
+		renderer.drawline256(x * 4096, y * 4096, x2 * 4096, y * 4096, col);
+		renderer.drawline256(x * 4096, y2 * 4096, x2 * 4096, y2 * 4096, col);
+		renderer.drawline256(x * 4096, y * 4096, x * 4096, y2 * 4096, col);
+		renderer.drawline256(x2 * 4096, y * 4096, x2 * 4096, y2 * 4096, col);
 	}
 
 	public abstract void draw(MenuHandler handler);
+
+	@Deprecated
 	public abstract boolean callback(MenuHandler handler, MenuOpt opt);
+	@Deprecated
 	public abstract boolean mouseAction(int mx, int my);
 	public abstract void open();
 	public abstract void close();

@@ -1,3 +1,19 @@
+// This file is part of BuildGDX.
+// Copyright (C) 2023-2024 Alexander Makarov-[M210] (m210-2007@mail.ru)
+//
+// BuildGDX is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// BuildGDX is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with BuildGDX.  If not, see <http://www.gnu.org/licenses/>.
+
 package ru.m210projects.Build.Pattern.Tools;
 
 import static ru.m210projects.Build.Strhandler.*;
@@ -19,10 +35,11 @@ public class NaturalComparator {
 				return -1;
 			} else if (!isDigit1 && isDigit2) {
 				return 1;
-			} else if (!isDigit1 && !isDigit2) {
+			} else if (!isDigit1) {
 				int c = c1 - c2;
-				if (c != 0) 
+				if (c != 0) {
 					return c;
+				}
 			} else {
 				long num1 = parse(c1);
 				while (idx1 < len1) {
@@ -66,7 +83,7 @@ public class NaturalComparator {
 	}
 
 	private static int compare(long x, long y) {
-		return (x < y) ? -1 : ((x == y) ? 0 : 1);
+		return Long.compare(x, y);
 	}
 
 	private static long parse(char c1) {

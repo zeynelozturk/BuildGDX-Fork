@@ -16,43 +16,38 @@
 
 package ru.m210projects.Build.Pattern;
 
-import ru.m210projects.Build.Input.BuildControllers;
-import ru.m210projects.Build.OnSceenDisplay.OSDFunc;
+import ru.m210projects.Build.Engine;
+import ru.m210projects.Build.Pattern.MenuItems.MenuHandler;
+import ru.m210projects.Build.Pattern.MenuItems.SliderDrawable;
 import ru.m210projects.Build.Render.Renderer;
 import ru.m210projects.Build.Render.Renderer.RenderType;
 import ru.m210projects.Build.Script.DefScript;
-import ru.m210projects.Build.Pattern.MenuItems.MenuHandler;
-import ru.m210projects.Build.Pattern.MenuItems.SliderDrawable;
+import ru.m210projects.Build.osd.OsdFunc;
 
 public abstract class BuildFactory {
 
-	public BuildFactory() {
-		throw new UnsupportedOperationException("not implemented");
-	}
+    public String[] resources;
 
-	public String[] resources;
-	public BuildFactory(String... resources) {
-		this.resources = resources;
-	}
+    public BuildFactory(String... resources) {
+        this.resources = resources;
+    }
 
-	public abstract void drawInitScreen();
+    public abstract void drawInitScreen();
 
-	public abstract DefScript getBaseDef(BuildEngine engine);
+    public abstract DefScript getBaseDef(Engine engine);
 
-	public abstract BuildEngine engine() throws Exception;
+    public abstract Engine engine() throws Exception;
 
-	public abstract Renderer renderer(RenderType type);
+    public abstract Renderer renderer(RenderType type);
 
-	public abstract BuildControls input(BuildControllers gpmanager);
+    public abstract OsdFunc getOsdFunc();
 
-	public abstract OSDFunc console();
+    public abstract MenuHandler menus();
 
-	public abstract MenuHandler menus();
+    public abstract FontHandler fonts();
 
-	public abstract FontHandler fonts();
+    public abstract BuildNet net();
 
-	public abstract BuildNet net();
-
-	public abstract SliderDrawable slider();
+    public abstract SliderDrawable slider();
 
 }

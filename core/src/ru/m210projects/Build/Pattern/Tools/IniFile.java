@@ -16,211 +16,177 @@
 
 package ru.m210projects.Build.Pattern.Tools;
 
-import static ru.m210projects.Build.Strhandler.toLowerCase;
+import ru.m210projects.Build.Types.PropertyIgnoreCase;
 
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import ru.m210projects.Build.FileHandle.FileEntry;
-import ru.m210projects.Build.Types.PropertyIgnoreCase;
+
+import static ru.m210projects.Build.Strhandler.toLowerCase;
 
 public class IniFile {
-	
-	protected Map<String, Integer> context;
-	protected List<Integer> pointer;
-	protected List<Integer> length;
-	protected int nContext = -1;
-	protected PropertyIgnoreCase ini;
-	protected StringReader reader;
-	protected String name;
-	protected byte[] data;
-	private FileEntry file;
-	
-	protected IniFile() { /* extends */	}
 
- 	public IniFile(byte[] data, String name, FileEntry file) {
-		this.name = toLowerCase(name);
-		this.file = file;
-		
-		init(data);
-	}
-	
-	public FileEntry getFile()
-	{
-		return file;
-	}
-	
-	public String getName()
-	{
-		return name;
-	}
-	
-	public boolean set(String context) {
-		context = toLowerCase(context);
-		try {
-			nContext = this.context.get(context);
-		} catch (Exception e) { nContext = -1; return false; }
+    protected Map<String, Integer> context;
+    protected List<Integer> pointer;
+    protected List<Integer> length;
+    protected int nContext = -1;
+    protected PropertyIgnoreCase ini;
+    protected StringReader reader;
+    protected String name;
+    protected byte[] data;
 
-		String l = new String(data, pointer.get(nContext), length.get(nContext));
-		
-		if(!l.contains("\\\\")) l = l.replace("\\","\\\\");
-		
-		if(reader != null) 
-			reader.close();
-		reader = new StringReader(l);
+    protected IniFile() { /* extends */ }
 
-		try {
-			ini.clear();
-			ini.load(reader);
-		} catch (Exception e) { 
-			e.printStackTrace();
-			nContext = -1; 
-			return false; 
-		}
+    public IniFile(byte[] data, String name) {
+        this.name = toLowerCase(name);
 
-		return true;
-	}
+        init(data);
+    }
 
-	public String GetKeyString(String key) {
-		String out = ini.getPropertyIgnoreCase(key);
-		if(out != null)
-			out = out.trim();
-		return out;
-	}
-	
-	public String GetKeyString(String key, int num)
-	{
-		String line = ini.getPropertyIgnoreCase(key);
-		if(line == null)
-			return null;
-		
-		line = line.trim();
+    public String getName() {
+        return name;
+    }
 
-		int startpos = 0, pos = 0, keynum = 0, mark = 0;
-		while(pos < line.length()) {
-			if(line.charAt(pos) == '"') {
-				mark++;
-			}
-			if(mark < 2) {
-				pos++;
-				continue;
-			}
+    public String getKeyString(String key) {
+        String out = ini.getPropertyIgnoreCase(key, "");
+        return out.trim();
+    }
 
-			if(line.charAt(pos) == ',') {
-				if(keynum == num)
-					break; 
-				else {
-					keynum++;
-					mark = 0;
-				}
-				startpos = pos+1;
-			}
-			pos++;
-		}
-		if(keynum != num)
-			return null;
-		line = line.substring(startpos, pos);
-		line = line.replaceAll("\"", "");
-		line = line.trim();
+    public String getKeyString(String key, int num) {
+        String line = ini.getPropertyIgnoreCase(key, "");
+        if (line.isEmpty()) {
+            return "";
+        }
+        String[] values = line.split(",");
+        if (values.length < num) {
+            return "";
+        }
 
-		return line;
-	}
-	
-	public int GetKeyInt(String key, int num)
-	{
-		String line = ini.getPropertyIgnoreCase(key);
-		if(line == null)
-			return 0;
-		line = line.trim();
-		
-		int startpos = 0, pos = 0, keynum = 0;
-		while(pos < line.length()) {
-			if(line.charAt(pos) == ',') {
-				if(keynum == num)
-					break; 
-				else
-					keynum++;
-				startpos = pos+1;
-			}
-			pos++;
-		}
-		line = line.substring(startpos, pos);
-		line = line.replaceAll("[^0-9]", ""); 
-		if(!line.isEmpty())
-			return Integer.parseInt(line);
-		else return 0;
-	}
-	
-	public int GetKeyInt(String key) {
-		String s;
-		if((s = ini.getPropertyIgnoreCase(key)) != null && !s.isEmpty()) {
-			s = s.replaceAll("[^0-9-]", ""); 
-			if(!s.isEmpty())
-				return Integer.parseInt(s);
-			else return 0;
-		}
-		
-		return -1;
-	}
-	
-	public List<String> getPropertyList() 
-	{
-	    List<String> result = new ArrayList<String>();
-	    for (Map.Entry<Object, Object> entry : ini.entrySet())
-	    	result.add((String) entry.getKey());
-	    
-	    return result;
-	}
-	
-	protected boolean isContext(String line) {
-		line = line.trim();
-		return line.startsWith("[") && line.endsWith("]");
-	}
-	
-	protected void init(byte[] data) {
-		this.data = data;
-		
-		if(data == null) return;
-	
-		ini = new PropertyIgnoreCase();
-		context = new HashMap<String, Integer>();
-		pointer = new ArrayList<Integer>();
-		length = new ArrayList<Integer>();
+        line = values[num];
+        line = line.replaceAll("\"", "");
+        line = line.trim();
+        return line;
+    }
 
-	    StringBuilder line;
-	    char c;
-	    int ptr = 0;
-	    while(ptr < data.length) {
-	    	line = new StringBuilder();
-	    	while(ptr < data.length && (c = (char)data[ptr++]) != '\n') {
-	    		line.append(c);
-	    	}
-	    	
-	    	if(isContext(line.toString())) {
-	    		pointer.add(ptr-line.length()-1);
-	    		line = new StringBuilder(toLowerCase(line.toString().replaceAll("[^a-zA-Z0-9_-]", "")));
-	    		context.put(line.toString(), pointer.size()-1);
-			}
-	    }
+    public int getKeyInt(String key, int num) {
+        String line = ini.getPropertyIgnoreCase(key);
+        if (line == null) {
+            return 0;
+        }
+        line = line.trim();
 
-	    if(pointer.size() > 0)
-		{
-			for( int i = 0; i < pointer.size() - 1; i++) {
-				if(i + 1 < pointer.size()) {
-					length.add(pointer.get(i + 1) - pointer.get(i));
-				}
-			}
-			length.add(data.length - pointer.get(pointer.size() - 1));
-		}
-	}
-	
-	public void close() {
-		data = null;	
-		if(ini != null) {
-			ini.clear();
-			ini = null;
-		}
-	}
+        int startpos = 0, pos = 0, keynum = 0;
+        while (pos < line.length()) {
+            if (line.charAt(pos) == ',') {
+                if (keynum == num) {
+                    break;
+                } else {
+                    keynum++;
+                }
+                startpos = pos + 1;
+            }
+            pos++;
+        }
+        line = line.substring(startpos, pos);
+        line = line.replaceAll("[^0-9]", "");
+        if (!line.isEmpty()) {
+            return Integer.parseInt(line);
+        } else {
+            return 0;
+        }
+    }
+
+    public int getKeyInt(String key) {
+        String s;
+        if ((s = ini.getPropertyIgnoreCase(key)) != null && !s.isEmpty()) {
+            s = s.replaceAll("[^0-9-]", "");
+            if (!s.isEmpty()) {
+                return Integer.parseInt(s);
+            } else {
+                return 0;
+            }
+        }
+
+        return -1;
+    }
+
+    protected boolean isContext(String line) {
+        line = line.trim();
+        return line.startsWith("[") && line.endsWith("]");
+    }
+
+    protected void init(byte[] data) {
+        this.data = data;
+
+        if (data == null) {
+            return;
+        }
+
+        ini = new PropertyIgnoreCase();
+        context = new HashMap<>();
+        pointer = new ArrayList<>();
+        length = new ArrayList<>();
+
+        StringBuilder line;
+        char c;
+        int ptr = 0;
+        while (ptr < data.length) {
+            line = new StringBuilder();
+            while (ptr < data.length && (c = (char) data[ptr++]) != '\n') {
+                line.append(c);
+            }
+
+            if (isContext(line.toString())) {
+                pointer.add(ptr - line.length() - 1);
+                line = new StringBuilder(toLowerCase(line.toString().replaceAll("[^a-zA-Z0-9_-]", "")));
+                context.put(line.toString(), pointer.size() - 1);
+            }
+        }
+
+        if (!pointer.isEmpty()) {
+            for (int i = 0; i < pointer.size() - 1; i++) {
+                if (i + 1 < pointer.size()) {
+                    length.add(pointer.get(i + 1) - pointer.get(i));
+                }
+            }
+            length.add(data.length - pointer.get(pointer.size() - 1));
+        }
+    }
+
+    public boolean set(String context) {
+        nContext = this.context.getOrDefault(toLowerCase(context), -1);
+        if (nContext == -1) {
+            return false;
+        }
+
+        String l = new String(data, pointer.get(nContext), length.get(nContext));
+
+        if (!l.contains("\\\\")) {
+            l = l.replace("\\", "\\\\");
+        }
+
+        if (reader != null) {
+            reader.close();
+        }
+        reader = new StringReader(l);
+
+        try {
+            ini.clear();
+            ini.load(reader);
+        } catch (Exception e) {
+            e.printStackTrace();
+            nContext = -1;
+            return false;
+        }
+
+        return true;
+    }
+
+    public void close() {
+        if (ini != null) {
+            ini.clear();
+        }
+    }
 }

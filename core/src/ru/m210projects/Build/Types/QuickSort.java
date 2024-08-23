@@ -1,3 +1,19 @@
+// This file is part of BuildGDX.
+// Copyright (C) 2023-2024 Alexander Makarov-[M210] (m210-2007@mail.ru)
+//
+// BuildGDX is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// BuildGDX is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with BuildGDX.  If not, see <http://www.gnu.org/licenses/>.
+
 package ru.m210projects.Build.Types;
 
 import java.util.Comparator;
@@ -20,25 +36,29 @@ public class QuickSort {
 
 		if (comp.compare(elementData[a], elementData[b]) > 0) {
 			if (comp.compare(elementData[a], elementData[c]) > 0) {
-				if (comp.compare(elementData[b], elementData[c]) > 0)
+				if (comp.compare(elementData[b], elementData[c]) > 0) {
 					return (b);
+				}
 				return (c);
 			}
 			return (a);
 		}
 
-		if (comp.compare(elementData[a], elementData[c]) >= 0)
+		if (comp.compare(elementData[a], elementData[c]) >= 0) {
 			return (a);
+		}
 
-		if (comp.compare(elementData[b], elementData[c]) > 0)
+		if (comp.compare(elementData[b], elementData[c]) > 0) {
 			return (c);
+		}
 
 		return (b);
 	}
 
 	public static <E> void sort(E[] elementData, int size, Comparator<? super E> c) {
-		if(size == 0)
+		if(size == 0) {
 			return;
+		}
 
 		int n = size;
 
@@ -91,8 +111,9 @@ public class QuickSort {
 							pc--;
 						}
 
-						if (pb > pc)
+						if (pb > pc) {
 							break;
+						}
 
 						swap(elementData, pb, pc);
 						pb++;
@@ -119,8 +140,9 @@ public class QuickSort {
 						n_stack[sp] = s;
 						n = r;
 					} else {
-						if (r <= 1)
+						if (r <= 1) {
 							break;
+						}
 						base_stack[sp] = base;
 						n_stack[sp] = r;
 						base = pn - s;
@@ -130,8 +152,9 @@ public class QuickSort {
 				}
 			}
 
-			if (sp-- == 0)
+			if (sp-- == 0) {
 				break;
+			}
 
 			base = base_stack[sp];
 			n = n_stack[sp];
@@ -151,25 +174,29 @@ public class QuickSort {
 	private static int med3(int[] elementData, IntComparator comp, int a, int b, int c) {
 		if (comp.compare(elementData[a], elementData[b]) > 0) {
 			if (comp.compare(elementData[a], elementData[c]) > 0) {
-				if (comp.compare(elementData[b], elementData[c]) > 0)
+				if (comp.compare(elementData[b], elementData[c]) > 0) {
 					return (b);
+				}
 				return (c);
 			}
 			return (a);
 		}
 
-		if (comp.compare(elementData[a], elementData[c]) >= 0)
+		if (comp.compare(elementData[a], elementData[c]) >= 0) {
 			return (a);
+		}
 
-		if (comp.compare(elementData[b], elementData[c]) > 0)
+		if (comp.compare(elementData[b], elementData[c]) > 0) {
 			return (c);
+		}
 
 		return (b);
 	}
 
 	public static void sort(int[] elementData, int size, IntComparator c) {
-		if(size == 0)
+		if(size == 0) {
 			return;
+		}
 
 		int n = size;
 
@@ -222,8 +249,9 @@ public class QuickSort {
 							pc--;
 						}
 
-						if (pb > pc)
+						if (pb > pc) {
 							break;
+						}
 
 						swap(elementData, pb, pc);
 						pb++;
@@ -250,8 +278,9 @@ public class QuickSort {
 						n_stack[sp] = s;
 						n = r;
 					} else {
-						if (r <= 1)
+						if (r <= 1) {
 							break;
+						}
 						base_stack[sp] = base;
 						n_stack[sp] = r;
 						base = pn - s;
@@ -261,8 +290,9 @@ public class QuickSort {
 				}
 			}
 
-			if (sp-- == 0)
+			if (sp-- == 0) {
 				break;
+			}
 
 			base = base_stack[sp];
 			n = n_stack[sp];

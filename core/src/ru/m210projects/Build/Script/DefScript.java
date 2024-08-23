@@ -18,14 +18,13 @@ import static ru.m210projects.Build.Engine.MAXTILES;
 import static ru.m210projects.Build.Engine.NORMALPAL;
 import static ru.m210projects.Build.Engine.RESERVEDPALS;
 import static ru.m210projects.Build.Engine.SPECULARPAL;
-import static ru.m210projects.Build.Engine.palette;
 import static ru.m210projects.Build.Gameutils.BClipRange;
-import static ru.m210projects.Build.OnSceenDisplay.Console.OSDTEXT_RED;
-import static ru.m210projects.Build.OnSceenDisplay.Console.OSDTEXT_YELLOW;
 import static ru.m210projects.Build.Strhandler.toLowerCase;
 
-import java.io.File;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -35,15 +34,16 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Pixmap.Filter;
 import com.badlogic.gdx.graphics.Pixmap.Format;
 
-import ru.m210projects.Build.CRC32;
 import ru.m210projects.Build.Engine;
-import ru.m210projects.Build.Architecture.BuildGdx;
-import ru.m210projects.Build.FileHandle.FileEntry;
-import ru.m210projects.Build.FileHandle.FileUtils;
-import ru.m210projects.Build.FileHandle.Resource;
-import ru.m210projects.Build.FileHandle.Resource.Whence;
-import ru.m210projects.Build.OnSceenDisplay.Console;
-import ru.m210projects.Build.Pattern.BuildEngine;
+import ru.m210projects.Build.Types.*;
+import ru.m210projects.Build.filehandle.Cache;
+import ru.m210projects.Build.filehandle.Entry;
+import ru.m210projects.Build.filehandle.FileUtils;
+import ru.m210projects.Build.filehandle.StreamUtils;
+import ru.m210projects.Build.filehandle.art.ArtEntry;
+import ru.m210projects.Build.filehandle.art.DynamicArtEntry;
+import ru.m210projects.Build.filehandle.fs.FileEntry;
+import ru.m210projects.Build.osd.Console;
 import ru.m210projects.Build.Render.ModelHandle.MDInfo;
 import ru.m210projects.Build.Render.ModelHandle.VoxelInfo;
 import ru.m210projects.Build.Render.ModelHandle.ModelInfo;
@@ -51,7 +51,7 @@ import ru.m210projects.Build.Render.ModelHandle.ModelInfo.Type;
 import ru.m210projects.Build.Render.ModelHandle.MDModel.MD2.MD2Info;
 import ru.m210projects.Build.Render.ModelHandle.MDModel.MD3.MD3Info;
 import ru.m210projects.Build.Render.ModelHandle.Voxel.VoxelData;
-import ru.m210projects.Build.Types.Tile;
+import ru.m210projects.Build.osd.OsdColor;
 
 public class DefScript {
 
@@ -62,7 +62,10 @@ public class DefScript {
 	public final MapHackInfo mapInfo;
 	protected final Engine engine;
 
-	protected FileEntry currentAddon;
+	/**
+	 * Used for check "includeif" by addon name and search files in addon parent directory (group)
+	 */
+	protected Entry currentAddon;
 	protected HashMap<String, List<String>> addonsIncludes;
 
 	protected static class DefTile {
@@ -70,7 +73,7 @@ public class DefScript {
 		public byte[] waloff;
 		public short sizx, sizy;
 		public byte xoffset, yoffset;
-		public String hrp;
+		public Entry hrp;
 		public byte alphacut;
 		public final boolean internal;
 		public int optional;
@@ -89,8 +92,9 @@ public class DefScript {
 			this.internal = src.internal;
 			this.optional = src.optional;
 
-			if (src.next != null)
+			if (src.next != null) {
 				this.next = new DefTile(src.next);
+			}
 		}
 
 		public DefTile(int sizx, int sizy, long crc32, boolean internal) {
@@ -104,8 +108,9 @@ public class DefScript {
 			DefTile out = this;
 			while (true) {
 				DefTile n = out.next;
-				if (n == null)
-					return out;
+				if (n == null) {
+                    return out;
+                }
 				out = n;
 			}
 		}
@@ -113,37 +118,42 @@ public class DefScript {
 
 	protected DefTile[] tiles = new DefTile[MAXTILES];
 
-	public DefScript(DefScript src, FileEntry addon) {
+	/**
+	 * @param src baseDef
+	 * @param entry group file or file entry
+	 */
+	public DefScript(DefScript src, Entry entry) {
 		this.disposable = true;
-		this.texInfo = new TextureHDInfo(src.texInfo);
+		this.texInfo = new TextureHDInfo().setFrom(src.texInfo);
 		this.mdInfo = new ModelsInfo(src.mdInfo, src.disposable);
 		this.audInfo = new AudioInfo(src.audInfo);
 		this.mapInfo = createMapHackInfo(src.mapInfo);
 		this.engine = src.engine;
 		for (int i = 0; i < MAXTILES; i++) {
-			if (src.tiles[i] == null)
-				continue;
+			if (src.tiles[i] == null) {
+                continue;
+            }
 
 			this.tiles[i] = new DefTile(src.tiles[i]);
 		}
 
 		if (src.addonsIncludes != null) {
-			addonsIncludes = new HashMap<String, List<String>>();
+			addonsIncludes = new HashMap<>();
 
 			for (String key : src.addonsIncludes.keySet()) {
 				List<String> list = src.addonsIncludes.get(key);
-				List<String> clone = new ArrayList<String>(list.size());
+				List<String> clone = new ArrayList<>(list.size());
 				clone.addAll(list);
 
 				addonsIncludes.put(key, clone);
 			}
 		}
 
-		this.currentAddon = addon;
+		this.currentAddon = entry;
 	}
 
-	public DefScript(BuildEngine engine, boolean disposable) {
-		this.disposable = disposable;
+	public DefScript(Engine engine) {
+		this.disposable = false;
 		texInfo = new TextureHDInfo();
 		mdInfo = new ModelsInfo();
 		audInfo = new AudioInfo();
@@ -153,51 +163,45 @@ public class DefScript {
 	}
 
 	protected MapHackInfo createMapHackInfo(MapHackInfo src) {
-		if (src != null)
+		if (src != null) {
 			return new MapHackInfo(src);
+		}
 		return new MapHackInfo();
 	}
 
-	public boolean loadScript(FileEntry file) {
+	public boolean loadScript(Entry file) {
 		if (file == null) {
-			Console.Println("Def error: script not found", OSDTEXT_RED);
+			Console.out.println("Def error: script not found", OsdColor.RED);
 			return false;
 		}
 
-		Resource res = BuildGdx.compat.open(file);
-		byte[] data = res.getBytes();
-		res.close();
-
-		if (data == null) {
-			Console.Println("File is exists, but data == null! Path:" + file.getPath());
-			return false;
+		Scriptfile script = new Scriptfile(file.getName(), file);
+		if (file instanceof FileEntry) {
+			script.path = ((FileEntry) file).getRelativePath().toString();
 		}
-
-		Scriptfile script = new Scriptfile(file.getPath(), data);
-		script.path = file.getParent().getRelativePath();
 
 		try {
 			defsparser(script);
 		} catch (Exception e) {
 			e.printStackTrace();
-			Console.Println("Def error: the script " + file.getPath() + " has errors", OSDTEXT_RED);
+			Console.out.println("Def error: the script " + file + " has errors", OsdColor.RED);
 			return false;
 		}
 
 		return true;
 	}
 
-	public boolean loadScript(String name, byte[] buf) {
-		if (buf == null) {
-			Console.Println("Def error: script not found", OSDTEXT_RED);
+	public boolean loadScript(String name, Entry entry) {
+		if (entry == null) {
+			Console.out.println("Def error: script not found", OsdColor.RED);
 			return false;
 		}
 
 		try {
-			defsparser(new Scriptfile(name, buf));
+			defsparser(new Scriptfile(name, entry));
 		} catch (Exception e) {
 			e.printStackTrace();
-			Console.Println("Def error: the script " + name + " has errors", OSDTEXT_RED);
+			Console.out.println("Def error: the script " + name + " has errors", OsdColor.RED);
 			return false;
 		}
 
@@ -217,41 +221,45 @@ public class DefScript {
 			} else if (def.crc32 != texstatus.crc32) {
 				def = tiles[tile].getLast();
 				def.next = texstatus;
-			} else if (def.internal || disposable)
-				tiles[tile] = texstatus;
+			} else if (def.internal || disposable) {
+                tiles[tile] = texstatus;
+            }
 		} else if (def == null || def.internal || disposable) {
 			tiles[tile] = texstatus;
-		} else
-			return false;
+		} else {
+            return false;
+        }
 
 		return true;
 	}
 
 	protected void defsparser(Scriptfile script) {
-		Console.Println("Loading " + script.filename + "...");
+		Console.out.println("Loading " + script.filename + "...");
 		while (true) {
 			Token basetoken = (Token) gettoken(script, basetokens);
 			if (basetoken != null) {
-				if (basetoken == BaseToken.EOF)
-					return;
+				if (basetoken == BaseToken.EOF) {
+                    return;
+                }
 
-				synchronized (Engine.lock) {
-					basetoken.parse(script);
-				}
+				basetoken.parse(script);
 			}
 		}
 	}
 
 	protected Object gettoken(Scriptfile sf, Map<String, ?> list) {
 		int tok;
-		if (sf == null)
+		if (sf == null) {
 			return BaseToken.Error;
-		if ((tok = sf.gettoken()) == -2)
+		}
+		if ((tok = sf.gettoken()) == -2) {
 			return BaseToken.EOF;
+		}
 
 		Object out = list.get(toLowerCase(sf.textbuf.substring(tok, sf.textptr)));
-		if (out != null)
-			return out;
+		if (out != null) {
+            return out;
+        }
 
 		sf.errorptr = sf.textptr;
 		return BaseToken.Error;
@@ -259,20 +267,22 @@ public class DefScript {
 
 	protected String getFile(Scriptfile script) {
 		String fn = script.getstring();
-		if (fn == null)
-			return null;
+		if (fn == null) {
+            return null;
+        }
 
 		fn = FileUtils.getCorrectPath(fn);
-		if (script.path != null)
-			fn = script.path + File.separator + fn;
+//		if (script.path != null) {
+//			fn = script.path + File.separator + fn;
+//		}
 
 		return fn;
 	}
 
 	protected boolean check_tile(String defcmd, int tile, Scriptfile script, int cmdtokptr) {
 		if (tile >= MAXTILES) {
-			Console.Println("Error: " + defcmd + ": Invalid tile number on line " + script.filename + ":"
-					+ script.getlinum(cmdtokptr), OSDTEXT_RED);
+			Console.out.println("Error: " + defcmd + ": Invalid tile number on line " + script.filename + ":"
+					+ script.getlinum(cmdtokptr), OsdColor.RED);
 			return true;
 		}
 
@@ -281,16 +291,16 @@ public class DefScript {
 
 	protected boolean check_tile_range(String defcmd, int tilebeg, int tileend, Scriptfile script, int cmdtokptr) {
 		if (tileend < tilebeg) {
-			Console.Println("Warning: " + defcmd + ": backwards tile range on line " + script.filename + ":"
-					+ script.getlinum(cmdtokptr), OSDTEXT_YELLOW);
+			Console.out.println("Warning: " + defcmd + ": backwards tile range on line " + script.filename + ":"
+					+ script.getlinum(cmdtokptr), OsdColor.YELLOW);
 			int tmp = tilebeg;
 			tilebeg = tileend;
 			tileend = tmp;
 		}
 
 		if (tilebeg >= MAXTILES || tileend >= MAXTILES) {
-			Console.Println("Error: " + defcmd + ": Invalid tile range on line " + script.filename + ":"
-					+ script.getlinum(cmdtokptr), OSDTEXT_RED);
+			Console.out.println("Error: " + defcmd + ": Invalid tile range on line " + script.filename + ":"
+					+ script.getlinum(cmdtokptr), OsdColor.RED);
 			return true;
 		}
 
@@ -298,26 +308,28 @@ public class DefScript {
 	}
 
 	protected int getPtr(Scriptfile script, int line) {
-		if (line <= 2)
+		if (line <= 2) {
 			return script.lineoffs[0];
+		}
 
-		if (line <= script.linenum)
+		if (line <= script.linenum) {
 			return script.lineoffs[line - 2];
+		}
 		return script.eof;
 	}
 
 	public void dispose() {
-		if (!disposable)
-			return;
+		if (!disposable) {
+            return;
+        }
 
 		engine.loadpics();
 		for (int i = 0; i < MAXTILES; i++) {
-			if (tiles[i] == null)
-				continue;
+			if (tiles[i] == null) {
+                continue;
+            }
 
 			texInfo.remove(i, 0);
-
-			engine.getTile(i).data = null;
 			tiles[i] = null;
 		}
 
@@ -331,33 +343,30 @@ public class DefScript {
 
 			for (int i = 0; i < defs.size() / 2; i++) {
 				String fn = defs.get(2 * i + 1);
-				Resource res = BuildGdx.cache.open(fn, 0);
-				if (res == null) {
-					Console.Println("Warning: Failed including " + fn + " as module", OSDTEXT_RED);
+				Entry res = Cache.getInstance().getEntry(fn, true);
+				if (!res.exists()) {
+					Console.out.println("Warning: Failed including " + fn + " as module", OsdColor.RED);
 					continue;
 				}
 
-				Scriptfile included = new Scriptfile(fn, res.getBytes());
+				Scriptfile included = new Scriptfile(fn, res);
 				included.path = defs.get(2 * i);
 
 				defsparser(included);
-				res.close();
 			}
 		}
 
 		for (int i = 0; i < MAXTILES; i++) {
-			if (tiles[i] == null)
-				continue;
+			if (tiles[i] == null) {
+                continue;
+            }
 
 			DefTile tile = tiles[i];
-			Tile pic = engine.getTile(i);
+			ArtEntry pic = engine.getTile(i);
 
 			if (tile.crc32 != 0) {
-				byte[] data = pic.data;
-				if (data == null)
-					data = engine.loadtile(i);
 
-				long crc32 = data != null ? CRC32.getChecksum(data) : -1;
+				long crc32 = pic.getChecksum();
 				if (crc32 != tile.crc32) {
 					boolean found = false;
 					while (tile.next != null) {
@@ -368,27 +377,21 @@ public class DefScript {
 						}
 					}
 
-					if (!found)
-						continue;
+					if (!found) {
+                        continue;
+                    }
 				}
 			}
 
-			if (tile.waloff == null)
-				continue;
+			if (tile.waloff == null) {
+                continue;
+            }
 
-			engine.getrender().invalidatetile(i, -1, -1);
-
-			pic.data = new byte[tile.waloff.length];
-			System.arraycopy(tile.waloff, 0, pic.data, 0, tile.waloff.length);
-
-			pic.setWidth(tile.sizx);
-			pic.setHeight(tile.sizy);
-
-			pic.anm &= ~0x00FFFF00;
-			pic.anm |= (tile.xoffset & 0xFF) << 8;
-			pic.anm |= (tile.yoffset & 0xFF) << 16;
-
-			engine.setpicsiz(i);
+			final byte[] tileData = tile.waloff;
+			ArtEntry transferEntry = new ArtEntry(() -> new ByteArrayInputStream(tileData), i, 0, tile.sizx, tile.sizy, pic.getFlags());
+			transferEntry.setOffset(tile.xoffset, tile.yoffset);
+			DynamicArtEntry newPic = engine.getTileManager().allocatepermanenttile(transferEntry);
+			newPic.invalidate(); // necessary to recalc gl sizes
 
 			// replace hrp info
 			texInfo.addTexture(i, 0, tile.hrp, (0xFF - (tile.alphacut & 0xFF)) * (1.0f / 255.0f), 1.0f, 1.0f, 1.0f,
@@ -464,15 +467,17 @@ public class DefScript {
 		@Override
 		public BaseToken parse(Scriptfile script) {
 			int end;
-			if ((end = script.getbraces()) == -1)
+			if ((end = script.getbraces()) == -1) {
 				return BaseToken.Error;
+			}
 
 			Object tk;
 			String file = null, mhk = null, md4 = null;
 			while (script.textptr < end) {
 				tk = gettoken(script, maptokens);
-				if (checkErrorToken(script, tk))
-					continue;
+				if (checkErrorToken(script, tk)) {
+                    continue;
+                }
 
 				switch ((MapHackTokens) tk) {
 				default:
@@ -492,8 +497,11 @@ public class DefScript {
 				}
 			}
 
-			if (mapInfo.addMapInfo(file, mhk, md4))
+			Entry mapEntry = Cache.getInstance().getEntry(file, true);
+			Entry mhkEntry = Cache.getInstance().getEntry(mhk, true);
+			if (mapEntry.exists() && mhkEntry.exists() && mapInfo.addMapInfo(mapEntry, mhkEntry, md4)) {
 				return BaseToken.Ok;
+			}
 
 			return BaseToken.Error;
 		}
@@ -504,25 +512,27 @@ public class DefScript {
 		public BaseToken parse(Scriptfile script) {
 			String fn;
 
-			if ((fn = DefScript.this.getFile(script)) == null)
+			if ((fn = DefScript.this.getFile(script)) == null) {
 				return BaseToken.Warning;
+			}
 
 			include(DefScript.this, fn, script, script.ltextptr);
 			return BaseToken.Ok;
 		}
 
 		private void include(DefScript def, String fn, Scriptfile script, int cmdtokptr) {
-			byte[] data = BuildGdx.cache.getBytes(fn, 0);
-			if (data == null) {
-				if (cmdtokptr == 0)
-					Console.Println("Warning: Failed including " + fn + " as module", OSDTEXT_YELLOW);
-				else
-					Console.Println("Warning: Failed including " + fn + " on line " + script.filename + ":"
-							+ script.getlinum(cmdtokptr), OSDTEXT_YELLOW);
+			Entry entry = Cache.getInstance().getEntry(fn, true);
+			if (!entry.exists()) {
+				if (cmdtokptr == 0) {
+					Console.out.println("Warning: Failed including " + fn + " as module", OsdColor.YELLOW);
+				} else {
+					Console.out.println("Warning: Failed including " + fn + " on line " + script.filename + ":"
+							+ script.getlinum(cmdtokptr), OsdColor.YELLOW);
+				}
 				return;
 			}
 
-			Scriptfile included = new Scriptfile(fn, data);
+			Scriptfile included = new Scriptfile(fn, entry);
 			included.path = script.path;
 			def.defsparser(included);
 		}
@@ -534,12 +544,13 @@ public class DefScript {
 			DefScript def = DefScript.this;
 			String fn;
 
-			if (def.addonsIncludes == null)
-				def.addonsIncludes = new HashMap<String, List<String>>();
+			if (def.addonsIncludes == null) {
+				def.addonsIncludes = new HashMap<>();
+			}
 			String addon = script.getstring();
 			if (addon != null && (fn = def.getFile(script)) != null) {
 				if (def.addonsIncludes.get(addon) == null) {
-					List<String> list = new ArrayList<String>();
+					List<String> list = new ArrayList<>();
 					def.addonsIncludes.put(addon, list);
 				}
 
@@ -551,13 +562,15 @@ public class DefScript {
 		}
 	}
 
-	protected class EchoToken implements Token {
+	protected static class EchoToken implements Token {
 		@Override
 		public BaseToken parse(Scriptfile script) {
 			String message = script.getstring();
-			if(message != null)
-				Console.Println(message, Console.OSDTEXT_GOLD);
-			else Console.Println("");
+			if(message != null) {
+				Console.out.println(message, OsdColor.BROWN);
+			} else {
+				Console.out.println("");
+			}
 			return BaseToken.Ok;
 		}
 	}
@@ -566,25 +579,31 @@ public class DefScript {
 		@Override
 		public BaseToken parse(Scriptfile script) {
 			Integer tile0, tile1, speed, anm;
-			if ((tile0 = script.getsymbol()) == null)
+			if ((tile0 = script.getsymbol()) == null) {
 				return BaseToken.Error;
-			if ((tile1 = script.getsymbol()) == null)
+			}
+			if ((tile1 = script.getsymbol()) == null) {
 				return BaseToken.Error;
-			if ((speed = script.getsymbol()) == null)
+			}
+			if ((speed = script.getsymbol()) == null) {
 				return BaseToken.Error;
-			if ((anm = script.getsymbol()) == null)
+			}
+			if ((anm = script.getsymbol()) == null) {
 				return BaseToken.Error;
+			}
 
 			int length = (tile1 - tile0);
 			if (length <= 0) {
-				Console.Println("Warning: Animation lenght < 0, skipping", Console.OSDTEXT_RED);
+				Console.out.println("Warning: Animation lenght < 0, skipping", OsdColor.RED);
 				return BaseToken.Warning;
 			}
 
-			Tile pic = engine.getTile(tile0);
+			ArtEntry pic = engine.getTile(tile0);
 
-			pic.anm &= ~0x0F0000FF;
-			pic.anm |= ((anm & 3) << 6) | ((speed & 15) << 24) | length & 0x3F;
+			pic.disableAnimation();
+			pic.setAnimFrames(length);
+			pic.setAnimType(AnimType.findAnimType((anm & 3) << 6));
+			pic.setAnimSpeed(speed);
 
 			return BaseToken.Ok;
 		}
@@ -622,22 +641,24 @@ public class DefScript {
 			long tilecrc = 0;
 			boolean istexture = false;
 
-			if ((tile = script.getsymbol()) == null)
+			if ((tile = script.getsymbol()) == null) {
 				return BaseToken.Error;
-			if ((ttextureend = script.getbraces()) == -1)
+			}
+			if ((ttextureend = script.getbraces()) == -1) {
 				return BaseToken.Error;
+			}
 
 			while (script.textptr < ttextureend) {
 				Object tk = def.gettoken(script, tilefromtexturetokens);
 				if (tk instanceof BaseToken) {
 					int line = script.getlinum(script.ltextptr);
-					Console.Println(
+					Console.out.println(
 							script.filename + " has unknown token \""
 									+ toLowerCase(script.textbuf.substring(script.ltextptr, script.textptr))
 									+ "\" on line: "
 									+ toLowerCase(
 											script.textbuf.substring(getPtr(script, line), getPtr(script, line + 1))),
-							OSDTEXT_RED);
+							OsdColor.RED);
 					continue;
 				}
 				switch ((TileTextureTokens) tk) {
@@ -648,34 +669,35 @@ public class DefScript {
 					break;
 				case ALPHACUT:
 					value = script.getsymbol();
-					if (value != null)
-						talphacut = value;
+					if (value != null) {
+                        talphacut = value;
+                    }
 					talphacut = BClipRange(talphacut, 0, 255);
 					break;
 				case XOFFSET:
 					String xoffs = script.getstring();
-					if (xoffs.equalsIgnoreCase("ART"))
+					if (xoffs.equalsIgnoreCase("ART")) {
 						xoffset = engine.getTile(tile).getOffsetX();
-					else {
+					} else {
 						try {
 							xoffset = Byte.parseByte(xoffs);
 						} catch (Exception e) {
-							Console.Println("Xoffset value out of range. Value: \"" + xoffs + "\" was disabled.",
-									OSDTEXT_RED);
+							Console.out.println("Xoffset value out of range. Value: \"" + xoffs + "\" was disabled.",
+									OsdColor.RED);
 							break;
 						}
 					}
 					break;
 				case YOFFSET:
 					String yoffs = script.getstring();
-					if (yoffs.equalsIgnoreCase("ART"))
+					if (yoffs.equalsIgnoreCase("ART")) {
 						yoffset = engine.getTile(tile).getOffsetY();
-					else {
+					} else {
 						try {
 							yoffset = Byte.parseByte(yoffs);
 						} catch (Exception e) {
-							Console.Println("Yoffset value out of range. Value: \"" + yoffs + "\" was disabled.",
-									OSDTEXT_RED);
+							Console.out.println("Yoffset value out of range. Value: \"" + yoffs + "\" was disabled.",
+									OsdColor.RED);
 							break;
 						}
 					}
@@ -690,8 +712,9 @@ public class DefScript {
 			}
 			script.skipbrace(ttextureend); // close bracke
 
-			if (addTile(script, fn, tile, xoffset, yoffset, tilecrc, talphacut, istexture, ttexturetokptr) != null)
+			if (addTile(script, fn, tile, xoffset, yoffset, tilecrc, talphacut, istexture, ttexturetokptr) != null) {
 				return BaseToken.Ok;
+			}
 			return BaseToken.Error;
 		}
 
@@ -700,8 +723,8 @@ public class DefScript {
 			DefScript def = DefScript.this;
 
 			if (tile < 0 || tile >= MAXTILES) {
-				Console.Println("Error: missing or invalid 'tile number' for texture definition near line "
-						+ script.filename + ":" + script.getlinum(ttexturetokptr), OSDTEXT_RED);
+				Console.out.println("Error: missing or invalid 'tile number' for texture definition near line "
+						+ script.filename + ":" + script.getlinum(ttexturetokptr), OsdColor.RED);
 				return null;
 			}
 
@@ -712,48 +735,55 @@ public class DefScript {
 				String ext = FileUtils.getExtension(script.filename);
 				DefTile deftile = new DefTile(engine.getTile(tile).getWidth(), engine.getTile(tile).getHeight(),
 						tilecrc, ext != null && ext.equals("dat"));
-				if (xoffset != null)
+				if (xoffset != null) {
 					deftile.xoffset = xoffset;
-				if (yoffset != null)
+				}
+				if (yoffset != null) {
 					deftile.yoffset = yoffset;
+				}
 
-				if (xoffset == null && yoffset == null)
-					Console.Println("Error: missing 'file name' for tilefromtexture definition near line "
-							+ script.filename + ":" + script.getlinum(ttexturetokptr), OSDTEXT_RED);
+				if (xoffset == null && yoffset == null) {
+					Console.out.println("Error: missing 'file name' for tilefromtexture definition near line "
+							+ script.filename + ":" + script.getlinum(ttexturetokptr), OsdColor.RED);
+				}
 
-				if (def.addDefTile(deftile, tile))
-					return deftile;
+				if (def.addDefTile(deftile, tile)) {
+                    return deftile;
+                }
 
 				return null;
 			}
 
 			String ext = FileUtils.getExtension(script.filename);
-			DefTile texstatus = ImportTileFromTexture(fn, tile, tilecrc, talphacut, istexture,
+			DefTile texstatus = ImportTileFromTexture(Cache.getInstance().getEntry(fn, true), tile, tilecrc, talphacut, istexture,
 					ext != null && ext.equals("dat"));
-			if (texstatus == null)
-				return null;
+			if (texstatus == null) {
+                return null;
+            }
 
-			if (xoffset != null)
+			if (xoffset != null) {
 				texstatus.xoffset = xoffset;
-			if (yoffset != null)
+			}
+			if (yoffset != null) {
 				texstatus.yoffset = yoffset;
+			}
 
 			if (!def.addDefTile(texstatus, tile)) {
-				Console.Println("Error: \"" + fn + "\" has more than one tile, in tilefromtexture definition near line "
-						+ script.filename + ":" + script.getlinum(ttexturetokptr), OSDTEXT_RED);
+				Console.out.println("Error: \"" + fn + "\" has more than one tile, in tilefromtexture definition near line "
+						+ script.filename + ":" + script.getlinum(ttexturetokptr), OsdColor.RED);
 				return null;
 			}
 
 			return texstatus;
 		}
 
-		protected DefTile ImportTileFromTexture(String fn, int tile, long crc32, int alphacut, boolean istexture,
+		protected DefTile ImportTileFromTexture(Entry fn, int tile, long crc32, int alphacut, boolean istexture,
 				boolean internal) {
 			DefScript def = DefScript.this;
 
-			byte[] data = BuildGdx.cache.getBytes(fn, 0);
-			if (data == null) {
-				Console.Println("ImportTileFromTexture error: file " + fn + " not found!", Console.OSDTEXT_RED);
+			byte[] data = fn.getBytes();
+			if (data.length == 0) {
+				Console.out.println("ImportTileFromTexture error: file " + fn + " not found!", OsdColor.RED);
 				return null;
 			}
 
@@ -761,7 +791,7 @@ public class DefScript {
 			try {
 				pix = new Pixmap(data, 0, data.length);
 			} catch (Throwable e) { // if native code didn't load
-				Console.Println("ImportTileFromTexture error: " + e.getMessage(), Console.OSDTEXT_RED);
+				Console.out.println("ImportTileFromTexture error: " + e.getMessage(), OsdColor.RED);
 				return null;
 			}
 
@@ -777,20 +807,26 @@ public class DefScript {
 
 			ByteBuffer bb = pix.getPixels();
 			byte[] waloff = deftile.waloff;
+			PaletteManager paletteManager = engine.getPaletteManager();
+			byte[] basePalette = paletteManager.getBasePalette();
+			FastColorLookup fastColorLookup = paletteManager.getFastColorLookup();
 
-			for (int y = 0; y < ysiz; y++)
+			for (int y = 0; y < ysiz; y++) {
 				for (int x = 0; x < xsiz; x++) {
 					int r = (bb.get() & 0xFF) >> 2;
 					int g = (bb.get() & 0xFF) >> 2;
 					int b = (bb.get() & 0xFF) >> 2;
 					if (fmt == Format.RGBA4444 || fmt == Format.RGBA8888) {
-						if (bb.get() == 0)
-							waloff[x * ysiz + y] = -1;
-						else
-							waloff[x * ysiz + y] = def.engine.getclosestcol(palette, r, g, b);
-					} else
-						waloff[x * ysiz + y] = def.engine.getclosestcol(palette, r, g, b);
+						if (bb.get() == 0) {
+                            waloff[x * ysiz + y] = -1;
+                        } else {
+							waloff[x * ysiz + y] = fastColorLookup.getClosestColorIndex(basePalette, r, g, b);
+						}
+					} else {
+						waloff[x * ysiz + y] = fastColorLookup.getClosestColorIndex(basePalette, r, g, b);
+					}
 				}
+			}
 
 			if (istexture) {
 				deftile.hrp = fn;
@@ -888,7 +924,6 @@ public class DefScript {
 		public BaseToken parse(Scriptfile script) {
 			ModelTokens token;
 			Object tk;
-			Resource res;
 			Integer ivalue;
 			Double dvalue;
 
@@ -901,41 +936,42 @@ public class DefScript {
 			modelskin = lastmodelskin = 0;
 			seenframe = 0;
 
-			if ((modelfn = script.getstring()) == null)
+			if ((modelfn = script.getstring()) == null) {
 				return BaseToken.Error;
-			if ((modelend = script.getbraces()) == -1)
+			}
+			if ((modelend = script.getbraces()) == -1) {
 				return BaseToken.Error;
+			}
 
-			res = BuildGdx.cache.open(modelfn, 0);
-			if (res == null) {
-				Console.Println("Warning: File not found" + modelfn, OSDTEXT_YELLOW);
+			Entry res = Cache.getInstance().getEntry(modelfn, true);
+			if (!res.exists()) {
+				Console.out.println("Warning: File not found" + modelfn, OsdColor.YELLOW);
 				script.textptr = modelend + 1;
 				return BaseToken.Warning;
 			}
 
 			ModelInfo m = null;
-			try {
-				int sign = res.readInt();
-				res.seek(0, Whence.Set);
+			try(InputStream is = res.getInputStream()) {
+				int sign = StreamUtils.readInt(is);
 				switch (sign) {
 				case 0x32504449: // IDP2
-					m = new MD2Info(res, modelfn);
+					m = new MD2Info(res);
 					break;
 				case 0x33504449: // IDP3
-					m = new MD3Info(res, modelfn);
+					m = new MD3Info(res);
 					break;
 				default:
-					if (res.getExtension().equals("kvx"))
-						m = new ModelInfo(modelfn, Type.Voxel);
+					if (res.isExtension("kvx")) {
+						m = new ModelInfo(res, Type.Voxel);
+					}
 					break;
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-			res.close();
 
 			if (m == null) {
-				Console.Println("Warning: Failed loading model " + modelfn, OSDTEXT_YELLOW);
+				Console.out.println("Warning: Failed loading model " + modelfn, OsdColor.YELLOW);
 				script.textptr = modelend + 1;
 				return BaseToken.Warning;
 			}
@@ -944,13 +980,13 @@ public class DefScript {
 				tk = gettoken(script, modeltokens);
 				if (tk instanceof BaseToken) {
 					int line = script.getlinum(script.ltextptr);
-					Console.Println(
+					Console.out.println(
 							script.filename + " has unknown token \""
 									+ toLowerCase(script.textbuf.substring(script.ltextptr, script.textptr))
 									+ "\" on line: "
 									+ toLowerCase(
 											script.textbuf.substring(getPtr(script, line), getPtr(script, line + 1))),
-							OSDTEXT_RED);
+							OsdColor.RED);
 					continue;
 				}
 
@@ -960,8 +996,9 @@ public class DefScript {
 					break;
 				case SCALE:
 					dvalue = script.getdouble();
-					if (dvalue != null)
-						mdscale = dvalue;
+					if (dvalue != null) {
+                        mdscale = dvalue;
+                    }
 					break;
 				case SHADE: // XXX
 					if ((ivalue = script.getsymbol()) != null) {
@@ -969,16 +1006,18 @@ public class DefScript {
 					}
 					break;
 				case ZADD:
-					if ((dvalue = script.getdouble()) != null)
-						mzadd = dvalue;
+					if ((dvalue = script.getdouble()) != null) {
+                        mzadd = dvalue;
+                    }
 					break;
 //				case YOFFSET:
 //					if ((dvalue = script.getdouble()) != null)
 //						myoffset = dvalue;
 //					break;
 				case FLAGS:
-					if ((ivalue = script.getsymbol()) != null)
-						mdflags = ivalue;
+					if ((ivalue = script.getsymbol()) != null) {
+                        mdflags = ivalue;
+                    }
 					break;
 				case FRAME: {
 					int frametokptr = script.ltextptr;
@@ -987,19 +1026,20 @@ public class DefScript {
 					int ftilenume = -1, ltilenume = -1, tilex;
 					double smoothduration = 0.1;
 
-					if ((frameend = script.getbraces()) == -1)
-						break;
+					if ((frameend = script.getbraces()) == -1) {
+                        break;
+                    }
 
 					while (script.textptr < frameend) {
 						tk = gettoken(script, modelframetokens);
 						if (tk instanceof BaseToken) {
 							int line = script.getlinum(script.ltextptr);
-							Console.Println(
+							Console.out.println(
 									script.filename + " has unknown token \""
 											+ toLowerCase(script.textbuf.substring(script.ltextptr, script.textptr))
 											+ "\" on line: " + toLowerCase(script.textbuf
 													.substring(getPtr(script, line), getPtr(script, line + 1))),
-									OSDTEXT_RED);
+									OsdColor.RED);
 							continue;
 						}
 
@@ -1007,8 +1047,9 @@ public class DefScript {
 						default:
 							break;
 						case PAL:
-							if ((ivalue = script.getsymbol()) != null)
-								mdpal = ivalue;
+							if ((ivalue = script.getsymbol()) != null) {
+                                mdpal = ivalue;
+                            }
 							break;
 						case FRAME:
 							framename = script.getstring();
@@ -1020,16 +1061,19 @@ public class DefScript {
 							}
 							break;
 						case TILE0:
-							if ((ivalue = script.getsymbol()) != null)
-								ftilenume = ivalue;
+							if ((ivalue = script.getsymbol()) != null) {
+                                ftilenume = ivalue;
+                            }
 							break; // first tile number
 						case TILE1:
-							if ((ivalue = script.getsymbol()) != null)
-								ltilenume = ivalue;
+							if ((ivalue = script.getsymbol()) != null) {
+                                ltilenume = ivalue;
+                            }
 							break; // last tile number (inclusive)
 						case SMOOTHDURATION:
-							if ((dvalue = script.getdouble()) != null)
-								smoothduration = dvalue;
+							if ((dvalue = script.getdouble()) != null) {
+                                smoothduration = dvalue;
+                            }
 							break;
 						}
 					}
@@ -1047,13 +1091,13 @@ public class DefScript {
 							happy = 0;
 							break; // invalid model id!?
 						case -2:
-							Console.Println("Invalid tile number on line " + script.filename + ":"
-									+ script.getlinum(frametokptr), OSDTEXT_RED);
+							Console.out.println("Invalid tile number on line " + script.filename + ":"
+									+ script.getlinum(frametokptr), OsdColor.RED);
 							happy = 0;
 							break;
 						case -3:
-							Console.Println("Invalid frame name on line " + script.filename + ":"
-									+ script.getlinum(frametokptr), OSDTEXT_RED);
+							Console.out.println("Invalid frame name on line " + script.filename + ":"
+									+ script.getlinum(frametokptr), OsdColor.RED);
 							happy = 0;
 							break;
 						default:
@@ -1073,18 +1117,19 @@ public class DefScript {
 					int flags = 0;
 					double dfps = 1.0;
 
-					if ((animend = script.getbraces()) == -1)
-						break;
+					if ((animend = script.getbraces()) == -1) {
+                        break;
+                    }
 					while (script.textptr < animend) {
 						tk = gettoken(script, modelanimtokens);
 						if (tk instanceof BaseToken) {
 							int line = script.getlinum(script.ltextptr);
-							Console.Println(
+							Console.out.println(
 									script.filename + " has unknown token \""
 											+ toLowerCase(script.textbuf.substring(script.ltextptr, script.textptr))
 											+ "\" on line: " + toLowerCase(script.textbuf
 													.substring(getPtr(script, line), getPtr(script, line + 1))),
-									OSDTEXT_RED);
+									OsdColor.RED);
 							continue;
 						}
 
@@ -1098,41 +1143,44 @@ public class DefScript {
 							endframe = script.getstring();
 							break;
 						case FPS:
-							if ((dvalue = script.getdouble()) != null)
-								dfps = dvalue;
+							if ((dvalue = script.getdouble()) != null) {
+                                dfps = dvalue;
+                            }
 							break; // animation frame rate
 						case FLAGS:
-							if ((ivalue = script.getsymbol()) != null)
-								flags = ivalue;
+							if ((ivalue = script.getsymbol()) != null) {
+                                flags = ivalue;
+                            }
 							break;
 						}
 					}
 					script.skipbrace(animend); // close bracke
 
 					if (startframe == null) {
-						Console.Println("Error: missing 'start frame' for anim definition near line " + script.filename
-								+ ":" + script.getlinum(animtokptr), OSDTEXT_RED);
+						Console.out.println("Error: missing 'start frame' for anim definition near line " + script.filename
+								+ ":" + script.getlinum(animtokptr), OsdColor.RED);
 						happy = 0;
 					}
 
 					if (endframe == null) {
-						Console.Println("Error: missing 'end frame' for anim definition near line " + script.filename
-								+ ":" + script.getlinum(animtokptr), OSDTEXT_RED);
+						Console.out.println("Error: missing 'end frame' for anim definition near line " + script.filename
+								+ ":" + script.getlinum(animtokptr), OsdColor.RED);
 						happy = 0;
 					}
 					model_ok &= happy;
-					if (happy == 0 || m.getType() == Type.Voxel)
-						break;
+					if (happy == 0 || m.getType() == Type.Voxel) {
+                        break;
+                    }
 
 					switch (((MDInfo) m).setAnimation(startframe, endframe, (int) (dfps * (65536.0 * .001)), flags)) {
 					case -2:
-						Console.Println("Invalid starting frame name on line " + script.filename + ":"
-								+ script.getlinum(animtokptr), OSDTEXT_RED);
+						Console.out.println("Invalid starting frame name on line " + script.filename + ":"
+								+ script.getlinum(animtokptr), OsdColor.RED);
 						model_ok = 0;
 						break;
 					case -3:
-						Console.Println("Invalid ending frame name on line " + script.filename + ":"
-								+ script.getlinum(animtokptr), OSDTEXT_RED);
+						Console.out.println("Invalid ending frame name on line " + script.filename + ":"
+								+ script.getlinum(animtokptr), OsdColor.RED);
 						model_ok = 0;
 						break;
 					}
@@ -1149,19 +1197,20 @@ public class DefScript {
 					int palnum = 0, surfnum = 0;
 					double param = 1.0, specpower = 1.0, specfactor = 1.0;
 
-					if ((skinend = script.getbraces()) == -1)
-						break;
+					if ((skinend = script.getbraces()) == -1) {
+                        break;
+                    }
 
 					while (script.textptr < skinend) {
 						tk = gettoken(script, modelskintokens);
 						if (tk instanceof BaseToken) {
 							int line = script.getlinum(script.ltextptr);
-							Console.Println(
+							Console.out.println(
 									script.filename + " has unknown token \""
 											+ toLowerCase(script.textbuf.substring(script.ltextptr, script.textptr))
 											+ "\" on line: " + toLowerCase(script.textbuf
 													.substring(getPtr(script, line), getPtr(script, line + 1))),
-									OSDTEXT_RED);
+									OsdColor.RED);
 							continue;
 						}
 
@@ -1172,8 +1221,9 @@ public class DefScript {
 							palnum = script.getsymbol();
 							break;
 						case PARAM:
-							if ((dvalue = script.getdouble()) != null)
-								param = dvalue;
+							if ((dvalue = script.getdouble()) != null) {
+                                param = dvalue;
+                            }
 							break;
 						case PARALLAXSCALE:
 							script.getdouble(); // XXX
@@ -1183,27 +1233,30 @@ public class DefScript {
 							script.getdouble(); // XXX
 							break;
 						case SPECPOWER:
-							if ((dvalue = script.getdouble()) != null)
-								specpower = dvalue;
+							if ((dvalue = script.getdouble()) != null) {
+                                specpower = dvalue;
+                            }
 							break;
 						case SPECFACTOR:
-							if ((dvalue = script.getdouble()) != null)
-								specfactor = dvalue;
+							if ((dvalue = script.getdouble()) != null) {
+                                specfactor = dvalue;
+                            }
 							break;
 						case FILE:
 							skinfn = getFile(script);
 							break; // skin filename
 						case SURF:
-							if ((ivalue = script.getsymbol()) != null)
-								surfnum = ivalue;
+							if ((ivalue = script.getsymbol()) != null) {
+                                surfnum = ivalue;
+                            }
 							break; // getnumber
 						}
 					}
 					script.skipbrace(skinend); // close bracke
 
 					if (skinfn == null) {
-						Console.Println("Error: missing 'skin filename' for skin definition near line "
-								+ script.filename + ":" + script.getlinum(skintokptr), OSDTEXT_RED);
+						Console.out.println("Error: missing 'skin filename' for skin definition near line "
+								+ script.filename + ":" + script.getlinum(skintokptr), OsdColor.RED);
 						model_ok = 0;
 						break;
 					}
@@ -1231,21 +1284,22 @@ public class DefScript {
 						break;
 					}
 
-					if (!BuildGdx.cache.contains(skinfn, 0) || m.getType() == Type.Voxel)
-						break;
+					if (!Cache.getInstance().getEntry(skinfn, true).exists() || m.getType() == Type.Voxel) {
+                        break;
+                    }
 
 					switch (((MDInfo) m).setSkin(skinfn, palnum, Math.max(0, modelskin), surfnum, param, specpower,
 							specfactor)) {
 					case -2:
-						Console.Println(
+						Console.out.println(
 								"Invalid skin filename on line " + script.filename + ":" + script.getlinum(skintokptr),
-								OSDTEXT_RED);
+								OsdColor.RED);
 						model_ok = 0;
 						break;
 					case -3:
-						Console.Println(
+						Console.out.println(
 								"Invalid palette number on line " + script.filename + ":" + script.getlinum(skintokptr),
-								OSDTEXT_RED);
+								OsdColor.RED);
 						model_ok = 0;
 						break;
 					}
@@ -1257,19 +1311,20 @@ public class DefScript {
 					int ftilenume = -1, ltilenume = -1, tilex, flags = 0, fov = -1;
 					double xadd = 0.0, yadd = 0.0, zadd = 0.0, angadd = 0.0;
 
-					if ((frameend = script.getbraces()) == -1)
-						break;
+					if ((frameend = script.getbraces()) == -1) {
+                        break;
+                    }
 
 					while (script.textptr < frameend) {
 						tk = gettoken(script, modelhudtokens);
 						if (tk instanceof BaseToken) {
 							int line = script.getlinum(script.ltextptr);
-							Console.Println(
+							Console.out.println(
 									script.filename + " has unknown token \""
 											+ toLowerCase(script.textbuf.substring(script.ltextptr, script.textptr))
 											+ "\" on line: " + toLowerCase(script.textbuf
 													.substring(getPtr(script, line), getPtr(script, line + 1))),
-									OSDTEXT_RED);
+									OsdColor.RED);
 							continue;
 						}
 
@@ -1277,37 +1332,45 @@ public class DefScript {
 						default:
 							break;
 						case TILE:
-							if ((ivalue = script.getsymbol()) != null)
-								ftilenume = ivalue;
+							if ((ivalue = script.getsymbol()) != null) {
+                                ftilenume = ivalue;
+                            }
 							ltilenume = ftilenume;
 							break;
 						case TILE0:
-							if ((ivalue = script.getsymbol()) != null)
-								ftilenume = ivalue;
+							if ((ivalue = script.getsymbol()) != null) {
+                                ftilenume = ivalue;
+                            }
 							break; // first tile number
 						case TILE1:
-							if ((ivalue = script.getsymbol()) != null)
-								ltilenume = ivalue;
+							if ((ivalue = script.getsymbol()) != null) {
+                                ltilenume = ivalue;
+                            }
 							break; // last tile number (inclusive)
 						case XADD:
-							if ((dvalue = script.getdouble()) != null)
-								xadd = dvalue;
+							if ((dvalue = script.getdouble()) != null) {
+                                xadd = dvalue;
+                            }
 							break;
 						case YADD:
-							if ((dvalue = script.getdouble()) != null)
-								yadd = dvalue;
+							if ((dvalue = script.getdouble()) != null) {
+                                yadd = dvalue;
+                            }
 							break;
 						case ZADD:
-							if ((dvalue = script.getdouble()) != null)
-								zadd = dvalue;
+							if ((dvalue = script.getdouble()) != null) {
+                                zadd = dvalue;
+                            }
 							break;
 						case ANGADD:
-							if ((dvalue = script.getdouble()) != null)
-								angadd = dvalue;
+							if ((dvalue = script.getdouble()) != null) {
+                                angadd = dvalue;
+                            }
 							break;
 						case FOV:
-							if ((ivalue = script.getsymbol()) != null)
-								fov = ivalue;
+							if ((ivalue = script.getsymbol()) != null) {
+                                fov = ivalue;
+                            }
 							break;
 						case HIDE:
 							flags |= 1;
@@ -1333,9 +1396,9 @@ public class DefScript {
 
 					for (tilex = ftilenume; tilex <= ltilenume && happy != 0; tilex++) {
 						if (mdInfo.addHudInfo(tilex, xadd, yadd, zadd, (short) angadd, flags, fov) == -2) {
-							Console.Println(
+							Console.out.println(
 									"Invalid tile number on line " + script.filename + ":" + script.getlinum(hudtokptr),
-									OSDTEXT_RED);
+									OsdColor.RED);
 							happy = 0;
 						}
 
@@ -1348,11 +1411,9 @@ public class DefScript {
 			script.skipbrace(modelend); // close bracke
 
 			if (model_ok == 0) {
-				if (m != null) {
-					Console.Println("Removing model " + modelfn + " due to errors.", OSDTEXT_YELLOW);
-					mdInfo.removeModelInfo(m);
-				}
-				return BaseToken.Error;
+                Console.out.println("Removing model " + modelfn + " due to errors.", OsdColor.YELLOW);
+                mdInfo.removeModelInfo(m);
+                return BaseToken.Error;
 			}
 
 			m.setMisc((float) mdscale, (float) mzadd, (float) myoffset, mdflags);
@@ -1404,22 +1465,24 @@ public class DefScript {
 			Integer ttile;
 			Object tk;
 
-			if ((ttile = script.getsymbol()) == null)
+			if ((ttile = script.getsymbol()) == null) {
 				return BaseToken.Error;
-			if ((textureend = script.getbraces()) == -1)
+			}
+			if ((textureend = script.getbraces()) == -1) {
 				return BaseToken.Error;
+			}
 
 			while (script.textptr < textureend) {
 				tk = gettoken(script, texturetokens);
 				if (tk instanceof BaseToken) {
 					int line = script.getlinum(script.ltextptr);
-					Console.Println(
+					Console.out.println(
 							script.filename + " has unknown token \""
 									+ toLowerCase(script.textbuf.substring(script.ltextptr, script.textptr))
 									+ "\" on line: "
 									+ toLowerCase(
 											script.textbuf.substring(getPtr(script, line), getPtr(script, line + 1))),
-							OSDTEXT_RED);
+							OsdColor.RED);
 					continue;
 				}
 
@@ -1433,25 +1496,27 @@ public class DefScript {
 				case SPECULAR:
 				case NORMAL:
 					Integer tpal = -1;
-					String tfn = null;
+					Entry tfn = null;
 					double alphacut = -1.0, xscale = 1.0, yscale = 1.0, specpower = 1.0, specfactor = 1.0;
 					int flags = 0;
 					int palend;
 
-					if (token == TextureTokens.PAL && (tpal = script.getsymbol()) == null)
-						break;
-					if ((palend = script.getbraces()) == -1)
-						break;
+					if (token == TextureTokens.PAL && (tpal = script.getsymbol()) == null) {
+                        break;
+                    }
+					if ((palend = script.getbraces()) == -1) {
+                        break;
+                    }
 					while (script.textptr < palend) {
 						tk = gettoken(script, texturetokens);
 						if (tk instanceof BaseToken) {
 							int line = script.getlinum(script.ltextptr);
-							Console.Println(
+							Console.out.println(
 									script.filename + " has unknown token \""
 											+ toLowerCase(script.textbuf.substring(script.ltextptr, script.textptr))
 											+ "\" on line: " + toLowerCase(script.textbuf
 													.substring(getPtr(script, line), getPtr(script, line + 1))),
-									OSDTEXT_RED);
+									OsdColor.RED);
 							continue;
 						}
 
@@ -1459,29 +1524,40 @@ public class DefScript {
 						default:
 							break;
 						case FILE:
-							tfn = getFile(script);
+							Path filePath = FileUtils.getPath(getFile(script));
+							if (currentAddon != null) {
+								tfn = currentAddon.getParent().getEntry(filePath);
+							} else {
+								tfn = Cache.getInstance().getEntry(filePath, true);
+							}
 							break;
 						case ALPHACUT:
-							if (token != TextureTokens.PAL)
-								break;
-							if ((dvalue = script.getdouble()) != null)
-								alphacut = dvalue;
+							if (token != TextureTokens.PAL) {
+                                break;
+                            }
+							if ((dvalue = script.getdouble()) != null) {
+                                alphacut = dvalue;
+                            }
 							break;
 						case XSCALE:
-							if ((dvalue = script.getdouble()) != null)
-								xscale = dvalue;
+							if ((dvalue = script.getdouble()) != null) {
+                                xscale = dvalue;
+                            }
 							break;
 						case YSCALE:
-							if ((dvalue = script.getdouble()) != null)
-								yscale = dvalue;
+							if ((dvalue = script.getdouble()) != null) {
+                                yscale = dvalue;
+                            }
 							break;
 						case SPECPOWER:
-							if ((dvalue = script.getdouble()) != null)
-								specpower = dvalue;
+							if ((dvalue = script.getdouble()) != null) {
+                                specpower = dvalue;
+                            }
 							break;
 						case SPECFACTOR:
-							if ((dvalue = script.getdouble()) != null)
-								specfactor = dvalue;
+							if ((dvalue = script.getdouble()) != null) {
+                                specfactor = dvalue;
+                            }
 							break;
 
 						case PARALLAXSCALE:
@@ -1525,25 +1601,26 @@ public class DefScript {
 						break;
 					}
 
-					if (ttile >= MAXTILES)
-						break; // message is printed later
+					if (ttile >= MAXTILES) {
+                        break; // message is printed later
+                    }
 					if (token == TextureTokens.PAL && tpal >= MAXPALOOKUPS - RESERVEDPALS) {
-						Console.Println("Error: missing or invalid 'palette number' for texture definition near line "
-								+ script.filename + ":" + script.getlinum(script.ltextptr), OSDTEXT_RED);
+						Console.out.println("Error: missing or invalid 'palette number' for texture definition near line "
+								+ script.filename + ":" + script.getlinum(script.ltextptr), OsdColor.RED);
 						return BaseToken.Error;
 					}
 					if (tfn == null) {
-						Console.Println("Error: missing 'file name' for texture definition near line " + script.filename
-								+ ":" + script.getlinum(script.ltextptr), OSDTEXT_RED);
+						Console.out.println("Error: missing 'file name' for texture definition near line " + script.filename
+								+ ":" + script.getlinum(script.ltextptr), OsdColor.RED);
 						return BaseToken.Error;
 					}
 
-					if (!BuildGdx.cache.contains(tfn, 0)) {
-						Console.Println("Error: file \"" + tfn + "\" not found for texture definition near line "
-								+ script.filename + ":" + script.getlinum(script.ltextptr), OSDTEXT_RED);
+					if (!tfn.exists()) {
+						Console.out.println("Error: file \"" + tfn + "\" not found for texture definition near line "
+								+ script.filename + ":" + script.getlinum(script.ltextptr), OsdColor.RED);
 						return BaseToken.Error;
 					}
-//                  Console.Println("Loading hires texture \"" + tfn + "\"");
+//                  Console.out.println("Loading hires texture \"" + tfn + "\"");
 
 					texInfo.addTexture(ttile.intValue(), tpal.intValue(), tfn, (float) alphacut, (float) xscale,
 							(float) yscale, (float) specpower, (float) specfactor, flags);
@@ -1553,8 +1630,8 @@ public class DefScript {
 			script.skipbrace(textureend); // close bracke
 
 			if (ttile >= MAXTILES) {
-				Console.Println("Error: missing or invalid 'tile number' for texture definition near line "
-						+ script.filename + ":" + script.getlinum(script.ltextptr), OSDTEXT_RED);
+				Console.out.println("Error: missing or invalid 'tile number' for texture definition near line "
+						+ script.filename + ":" + script.getlinum(script.ltextptr), OsdColor.RED);
 				return BaseToken.Error;
 			}
 
@@ -1591,14 +1668,17 @@ public class DefScript {
 			boolean vrotate = false;
 
 			if ((fn = getFile(script)) == null) // voxel filename
+			{
 				return BaseToken.Error;
+			}
 
-			if ((vmodelend = script.getbraces()) == -1)
+			if ((vmodelend = script.getbraces()) == -1) {
 				return BaseToken.Error;
+			}
 
-			Resource res = BuildGdx.cache.open(fn, 0);
-			if (res == null) {
-				Console.Println("Warning: File not found" + fn, OSDTEXT_YELLOW);
+			Entry res = Cache.getInstance().getEntry(fn, true);
+			if (!res.exists()) {
+				Console.out.println("Warning: File not found" + fn, OsdColor.YELLOW);
 				script.textptr = vmodelend + 1;
 				return BaseToken.Warning;
 			}
@@ -1609,10 +1689,9 @@ public class DefScript {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-			res.close();
 
 			if (vox == null) {
-				Console.Println("Warning: Failed loading voxel model " + fn, OSDTEXT_YELLOW);
+				Console.out.println("Warning: Failed loading voxel model " + fn, OsdColor.YELLOW);
 				script.textptr = vmodelend + 1;
 
 				return BaseToken.Warning;
@@ -1622,42 +1701,47 @@ public class DefScript {
 				Object tk = gettoken(script, voxeltokens);
 				if (tk instanceof BaseToken) {
 					int line = script.getlinum(script.ltextptr);
-					Console.Println(
+					Console.out.println(
 							script.filename + " has unknown token \""
 									+ toLowerCase(script.textbuf.substring(script.ltextptr, script.textptr))
 									+ "\" on line: "
 									+ toLowerCase(
 											script.textbuf.substring(getPtr(script, line), getPtr(script, line + 1))),
-							OSDTEXT_RED);
+							OsdColor.RED);
 					continue;
 				}
 
 				switch ((VoxelTokens) tk) {
 				case TILE:
 					tilex = script.getsymbol();
-					if (check_tile("voxel", tilex, script, script.ltextptr))
-						break;
+					if (check_tile("voxel", tilex, script, script.ltextptr)) {
+                        break;
+                    }
 
 					mdInfo.addVoxelInfo(vox, tilex);
 					break;
 				case TILE0:
-					if ((ivalue = script.getsymbol()) != null)
-						tile0 = ivalue;
+					if ((ivalue = script.getsymbol()) != null) {
+                        tile0 = ivalue;
+                    }
 					break; // 1st tile #
 
 				case TILE1:
-					if ((ivalue = script.getsymbol()) != null)
-						tile1 = ivalue;
+					if ((ivalue = script.getsymbol()) != null) {
+                        tile1 = ivalue;
+                    }
 
-					if (check_tile_range("voxel", tile0, tile1, script, script.ltextptr))
-						break;
+					if (check_tile_range("voxel", tile0, tile1, script, script.ltextptr)) {
+                        break;
+                    }
 					for (tilex = tile0; tilex <= tile1; tilex++) {
 						mdInfo.addVoxelInfo(vox, tilex);
 					}
 					break; // last tile number (inclusive)
 				case SCALE:
-					if ((dvalue = script.getdouble()) != null)
-						vscale = dvalue;
+					if ((dvalue = script.getdouble()) != null) {
+                        vscale = dvalue;
+                    }
 					break;
 				case ROTATE:
 					vrotate = true;
@@ -1717,30 +1801,33 @@ public class DefScript {
 			Integer ivalue;
 			String[] sfn = new String[6];
 
-			if ((sskyend = script.getbraces()) == -1)
+			if ((sskyend = script.getbraces()) == -1) {
 				return BaseToken.Error;
+			}
 
 			while (script.textptr < sskyend) {
 				try {
 					Object tk = gettoken(script, skyboxtokens);
 					if (tk instanceof BaseToken) {
 						int line = script.getlinum(script.ltextptr);
-						Console.Println(script.filename + " has unknown token \""
+						Console.out.println(script.filename + " has unknown token \""
 								+ toLowerCase(script.textbuf.substring(script.ltextptr, script.textptr))
 								+ "\" on line: "
 								+ toLowerCase(script.textbuf.substring(getPtr(script, line), getPtr(script, line + 1))),
-								OSDTEXT_RED);
+								OsdColor.RED);
 						continue;
 					}
 
 					switch ((SkyboxTokens) tk) {
 					case TILE:
-						if ((ivalue = script.getsymbol()) != null)
-							stile = ivalue;
+						if ((ivalue = script.getsymbol()) != null) {
+                            stile = ivalue;
+                        }
 						break;
 					case PAL:
-						if ((ivalue = script.getsymbol()) != null)
-							spal = ivalue;
+						if ((ivalue = script.getsymbol()) != null) {
+                            spal = ivalue;
+                        }
 						break;
 					case FRONT:
 						sfn[0] = getFile(script);
@@ -1775,32 +1862,35 @@ public class DefScript {
 				}
 			}
 			script.skipbrace(sskyend); // close bracke
-			if (addSkybox(script, stile, spal, sfn))
+			if (addSkybox(script, stile, spal, sfn)) {
 				return BaseToken.Ok;
+			}
 			return BaseToken.Error;
 		}
 
 		public boolean addSkybox(Scriptfile script, int stile, int spal, String[] sfn) {
 			if (stile < 0) {
-				Console.Println("Error: skybox: missing 'tile number' near line " + script.filename + ":"
-						+ script.getlinum(script.ltextptr), OSDTEXT_RED);
+				Console.out.println("Error: skybox: missing 'tile number' near line " + script.filename + ":"
+						+ script.getlinum(script.ltextptr), OsdColor.RED);
 				return false;
 			}
 
+			Entry[] faces = new Entry[6];
 			for (int i = 0; i < 6; i++) {
 				if (sfn[i] == null) {
-					Console.Println("Error: skybox: missing " + skyfaces[i] + " filename' near line " + script.filename
-							+ ":" + script.getlinum(script.ltextptr), OSDTEXT_RED);
+					Console.out.println("Error: skybox: missing " + skyfaces[i] + " filename' near line " + script.filename
+							+ ":" + script.getlinum(script.ltextptr), OsdColor.RED);
 					return false;
 				}
 
-				if (!BuildGdx.cache.contains(sfn[i], 0)) {
-					Console.Println("Error: file \"" + sfn[i] + "\" does not exist", OSDTEXT_RED);
+				faces[i] = Cache.getInstance().getEntry(sfn[i], true);
+				if (!faces[i].exists()) {
+					Console.out.println("Error: file \"" + sfn[i] + "\" does not exist", OsdColor.RED);
 					return false;
 				}
 			}
 
-			texInfo.addSkybox(stile, spal, sfn);
+			texInfo.addSkybox(stile, spal, faces);
 			return true;
 		}
 	}
@@ -1812,10 +1902,12 @@ public class DefScript {
 			Integer ivalue;
 			String[] sfn = new String[6];
 
-			if ((ivalue = script.getsymbol()) != null)
-				stile = ivalue;
-			if ((ivalue = script.getsymbol()) != null)
-				spal = ivalue;
+			if ((ivalue = script.getsymbol()) != null) {
+                stile = ivalue;
+            }
+			if ((ivalue = script.getsymbol()) != null) {
+                spal = ivalue;
+            }
 			script.getsymbol();
 
 			sfn[0] = getFile(script);
@@ -1825,8 +1917,9 @@ public class DefScript {
 			sfn[4] = getFile(script);
 			sfn[5] = getFile(script);
 
-			if (addSkybox(script, stile, spal, sfn))
+			if (addSkybox(script, stile, spal, sfn)) {
 				return BaseToken.Ok;
+			}
 			return BaseToken.Error;
 		}
 	}
@@ -1837,19 +1930,24 @@ public class DefScript {
 
 			Integer pal, r, g, b, f;
 
-			if ((pal = script.getsymbol()) == null)
+			if ((pal = script.getsymbol()) == null) {
 				return BaseToken.Error;
-			if ((r = script.getsymbol()) == null)
+			}
+			if ((r = script.getsymbol()) == null) {
 				return BaseToken.Error;
-			if ((g = script.getsymbol()) == null)
+			}
+			if ((g = script.getsymbol()) == null) {
 				return BaseToken.Error;
-			if ((b = script.getsymbol()) == null)
+			}
+			if ((b = script.getsymbol()) == null) {
 				return BaseToken.Error;
-			if ((f = script.getsymbol()) == null)
+			}
+			if ((f = script.getsymbol()) == null) {
 				return BaseToken.Error;
+			}
 
-			Console.Println("Loading tint " + pal);
-			texInfo.setPaletteTint(pal.intValue(), r.intValue(), g.intValue(), b.intValue(), f.intValue());
+			Console.out.println("Loading tint " + pal);
+			texInfo.setPaletteTint(pal, r, g, b, f);
 
 			return BaseToken.Ok;
 		}
@@ -1878,42 +1976,48 @@ public class DefScript {
 			Integer ivalue;
 			int send;
 
-			if ((send = script.getbraces()) == -1)
+			if ((send = script.getbraces()) == -1) {
 				return BaseToken.Error;
+			}
 
 			while (script.textptr < send) {
 				try {
 					Object tk = gettoken(script, tinttokens);
 					if (tk instanceof BaseToken) {
 						int line = script.getlinum(script.ltextptr);
-						Console.Println(script.filename + " has unknown token \""
+						Console.out.println(script.filename + " has unknown token \""
 								+ toLowerCase(script.textbuf.substring(script.ltextptr, script.textptr))
 								+ "\" on line: "
 								+ toLowerCase(script.textbuf.substring(getPtr(script, line), getPtr(script, line + 1))),
-								OSDTEXT_RED);
+								OsdColor.RED);
 						continue;
 					}
 
 					switch ((TintTokens) tk) {
 					case PAL:
-						if ((ivalue = script.getsymbol()) != null)
-							pal = ivalue;
+						if ((ivalue = script.getsymbol()) != null) {
+                            pal = ivalue;
+                        }
 						break;
 					case RED:
-						if ((ivalue = script.getsymbol()) != null)
-							r = ivalue;
+						if ((ivalue = script.getsymbol()) != null) {
+                            r = ivalue;
+                        }
 						break;
 					case GREEN:
-						if ((ivalue = script.getsymbol()) != null)
-							g = ivalue;
+						if ((ivalue = script.getsymbol()) != null) {
+                            g = ivalue;
+                        }
 						break;
 					case BLUE:
-						if ((ivalue = script.getsymbol()) != null)
-							b = ivalue;
+						if ((ivalue = script.getsymbol()) != null) {
+                            b = ivalue;
+                        }
 						break;
 					case FLAGS:
-						if ((ivalue = script.getsymbol()) != null)
-							f = ivalue;
+						if ((ivalue = script.getsymbol()) != null) {
+                            f = ivalue;
+                        }
 						break;
 
 					default:
@@ -1924,12 +2028,12 @@ public class DefScript {
 			}
 			script.skipbrace(send); // close bracke
 			if (pal == -1) {
-				Console.Println("Tint palette is not found!", OSDTEXT_RED);
+				Console.out.println("Tint palette is not found!", OsdColor.RED);
 				return BaseToken.Error;
 			}
 
-			Console.Println("Loading tint " + pal);
-			texInfo.setPaletteTint((int) pal, r, g, b, f);
+			Console.out.println("Loading tint " + pal);
+			texInfo.setPaletteTint(pal, r, g, b, f);
 
 			return BaseToken.Ok;
 		}
@@ -1956,19 +2060,20 @@ public class DefScript {
 			int dummy;
 			String t_id = null, t_file = null;
 
-			if ((dummy = script.getbraces()) == -1)
+			if ((dummy = script.getbraces()) == -1) {
 				return BaseToken.Error;
+			}
 			while (script.textptr < dummy) {
 				Object tk = gettoken(script, sound_musictokens);
 				if (tk instanceof BaseToken) {
 					int line = script.getlinum(script.ltextptr);
-					Console.Println(
+					Console.out.println(
 							script.filename + " has unknown token \""
 									+ toLowerCase(script.textbuf.substring(script.ltextptr, script.textptr))
 									+ "\" on line: "
 									+ toLowerCase(
 											script.textbuf.substring(getPtr(script, line), getPtr(script, line + 1))),
-							OSDTEXT_RED);
+							OsdColor.RED);
 					continue;
 				}
 
@@ -1977,8 +2082,9 @@ public class DefScript {
 					break;
 				case ID:
 					String t = script.getstring();
-					if (t != null)
+					if (t != null) {
 						t_id = t.trim();
+					}
 					break;
 				case FILE:
 					t_file = getFile(script);
@@ -1996,11 +2102,11 @@ public class DefScript {
 	protected boolean checkErrorToken(Scriptfile script, Object tk) {
 		if (tk instanceof BaseToken) {
 			int line = script.getlinum(script.ltextptr);
-			Console.Println(
+			Console.out.println(
 					script.filename + " has unknown token \""
 							+ toLowerCase(script.textbuf.substring(script.ltextptr, script.textptr)) + "\" on line: "
 							+ toLowerCase(script.textbuf.substring(getPtr(script, line), getPtr(script, line + 1))),
-					OSDTEXT_RED);
+					OsdColor.RED);
 			return true;
 		}
 

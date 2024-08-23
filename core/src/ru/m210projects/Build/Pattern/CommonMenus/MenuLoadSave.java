@@ -16,74 +16,69 @@
 
 package ru.m210projects.Build.Pattern.CommonMenus;
 
-import java.io.File;
-
 import ru.m210projects.Build.Engine;
-import ru.m210projects.Build.FileHandle.Compat.Path;
-import ru.m210projects.Build.Pattern.BuildFont;
 import ru.m210projects.Build.Pattern.BuildGame;
-import ru.m210projects.Build.Pattern.MenuItems.BuildMenu;
-import ru.m210projects.Build.Pattern.MenuItems.MenuHandler;
-import ru.m210projects.Build.Pattern.MenuItems.MenuItem;
-import ru.m210projects.Build.Pattern.MenuItems.MenuPicnum;
-import ru.m210projects.Build.Pattern.MenuItems.MenuProc;
-import ru.m210projects.Build.Pattern.MenuItems.MenuScroller;
-import ru.m210projects.Build.Pattern.MenuItems.MenuSlotList;
-import ru.m210projects.Build.Pattern.MenuItems.MenuText;
-import ru.m210projects.Build.Pattern.MenuItems.MenuTitle;
+import ru.m210projects.Build.Pattern.MenuItems.*;
 import ru.m210projects.Build.Pattern.Tools.SaveManager;
+import ru.m210projects.Build.Types.font.Font;
+import ru.m210projects.Build.filehandle.fs.FileEntry;
 
 public abstract class MenuLoadSave extends BuildMenu {
 
-	public MenuPicnum picnum;
-	public MenuSlotList list;
-	public MenuScroller slider;
-	public MenuText mInfo;
-	
-	public MenuLoadSave(BuildGame app, BuildFont style, int posx, int posy, int posyHelp, int width, int nItems, int listPal, int specPal, int nBackground, MenuProc confirm, boolean saveMenu)
-	{
-		addItem(getTitle(app, saveMenu ? "Save game" : "Load game"), false);
+    public MenuPicnum picnum;
+    public MenuSlotList list;
+    public MenuText mInfo;
 
-		picnum = getPicnum(app.pEngine, posx, posy);
-		
-		MenuProc updateCallback = new MenuProc() {
-			@Override
-			public void run(MenuHandler handler, MenuItem pItem) {
-				MenuSlotList pSlot = (MenuSlotList) pItem;
-				if (loadData(pSlot.FileName()))
-					picnum.nTile = SaveManager.Screenshot;
-				else
-					picnum.nTile = picnum.defTile;
-			}
-		};
-		
-		list = new MenuSlotList(app.pEngine, app.pSavemgr, style, posx, posy, posyHelp, width, nItems, updateCallback, confirm, listPal, specPal, nBackground, saveMenu) {
-			@Override
-			public boolean checkFile(String filename) {
-				return MenuLoadSave.this.checkFile(filename);
-			}
-		};
-		slider = new MenuScroller(app.pSlider, list, width + posx - app.pSlider.getScrollerWidth());
-		mInfo = getInfo(app, posx, posy);
-		
-		addItem(picnum, false);
-		addItem(mInfo, false);
-		addItem(list, true);
-		addItem(slider, false);
-	}
-	
-	public boolean checkFile(String filename)
-	{
-		File file = new File(Path.User.getPath() + filename);
-		return file.exists();
-	}
-	
-	public abstract boolean loadData(String filename);
-	
-	public abstract MenuTitle getTitle(BuildGame app, String text);
-	
-	public abstract MenuPicnum getPicnum(Engine draw, int x, int y);
-	
-	public abstract MenuText getInfo(BuildGame app, int x, int y);
-	
+    public MenuLoadSave(BuildGame app, Font style, int posx, int posy, int posyHelp, int width, int nItems, int listPal, int specPal, int nBackground, MenuProc confirm, boolean saveMenu) {
+        super(app.pMenu);
+        addItem(getTitle(app, saveMenu ? "Save game" : "Load game"), false);
+
+        picnum = getPicnum(app.pEngine, posx, posy);
+
+        MenuProc updateCallback = (handler, pItem) -> {
+            MenuSlotList pSlot = (MenuSlotList) pItem;
+            if (loadData(pSlot.getFileEntry())) {
+                picnum.nTile = SaveManager.Screenshot;
+            } else {
+                picnum.nTile = picnum.defTile;
+            }
+        };
+
+        list = new MenuSlotList(app.getRenderer(), app.pSavemgr, style, posx, posy, posyHelp, width, nItems, updateCallback, confirm, listPal, specPal, nBackground, saveMenu) {
+            @Override
+            public boolean checkFile(FileEntry entry) {
+                return MenuLoadSave.this.checkFile(entry);
+            }
+
+            @Override
+            protected void drawOwnCursor(int x, int y) {
+                MenuLoadSave.this.drawOwnCursor(x, y);
+            }
+        };
+
+        // doenst work
+        MenuScroller slider = new MenuScroller(app.pSlider, list, width + posx - app.pSlider.getScrollerWidth());
+        mInfo = getInfo(app, posx, posy);
+
+        addItem(picnum, false);
+        addItem(mInfo, false);
+        addItem(list, true);
+        addItem(slider, false);
+    }
+
+    public boolean checkFile(FileEntry entry) {
+        return entry.exists();
+    }
+
+    protected void drawOwnCursor(int x, int y) {
+    }
+
+    public abstract boolean loadData(FileEntry entry);
+
+    public abstract MenuTitle getTitle(BuildGame app, String text);
+
+    public abstract MenuPicnum getPicnum(Engine draw, int x, int y);
+
+    public abstract MenuText getInfo(BuildGame app, int x, int y);
+
 }

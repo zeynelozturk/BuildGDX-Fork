@@ -17,74 +17,77 @@
 package ru.m210projects.Build.Pattern.ScreenAdapters;
 
 import com.badlogic.gdx.ScreenAdapter;
-
+import org.jetbrains.annotations.NotNull;
 import ru.m210projects.Build.Engine;
-import ru.m210projects.Build.Architecture.BuildGdx;
-import ru.m210projects.Build.Architecture.BuildFrame.FrameType;
-import ru.m210projects.Build.Architecture.BuildGraphics.Option;
 import ru.m210projects.Build.Pattern.BuildGame;
 import ru.m210projects.Build.Pattern.MenuItems.BuildMenu;
 import ru.m210projects.Build.Pattern.MenuItems.MenuHandler;
-import ru.m210projects.Build.Settings.BuildConfig;
-import ru.m210projects.Build.Settings.BuildConfig.GameKeys;
+import ru.m210projects.Build.input.GameKey;
+import ru.m210projects.Build.input.InputListener;
+import ru.m210projects.Build.osd.Console;
+import ru.m210projects.Build.settings.GameConfig;
+import ru.m210projects.Build.settings.GameKeys;
 
-public abstract class MenuAdapter extends ScreenAdapter {
+public abstract class MenuAdapter extends ScreenAdapter implements InputListener {
 
-	protected BuildGame game;
-	protected MenuHandler menu;
-	protected Engine engine;
-	protected BuildConfig cfg;
-	protected BuildMenu mainMenu;
+    protected BuildGame game;
+    protected MenuHandler menu;
+    protected Engine engine;
+    protected GameConfig cfg;
+    protected BuildMenu mainMenu;
 
-	public abstract void draw(float delta);
+    public MenuAdapter(final BuildGame game, @NotNull BuildMenu mainMenu) {
+        this.game = game;
+        this.menu = game.pMenu;
+        this.engine = game.pEngine;
+        this.cfg = game.pCfg;
+        this.mainMenu = mainMenu;
+    }
 
-	public void process(float delta) { }
+    public abstract void draw(float delta);
 
-	public MenuAdapter(final BuildGame game, BuildMenu mainMenu)
-	{
-		this.game = game;
-		this.menu = game.pMenu;
-		this.engine = game.pEngine;
-		this.cfg = game.pCfg;
-		this.mainMenu = mainMenu;
-	}
+    public void process(float delta) {
+    }
 
-	@Override
-	public void render(float delta) {
-		if(!engine.getrender().isInited())
-			return;
+    @Override
+    public void render(float delta) {
+        game.getRenderer().clearview(0);
 
-		engine.clearview(0);
-		engine.sampletimer();
+        draw(delta);
 
-		draw(delta);
+        if (menu.gShowMenu) {
+            menu.mDrawMenu();
+        }
 
-		engine.handleevents();
+        process(delta);
 
-		if (menu.gShowMenu) {
-			menu.mKeyHandler(game.pInput, delta);
-			menu.mDrawMenu();
-		} else {
-			if (game.pInput.ctrlGetInputKey(GameKeys.Menu_Toggle, true))
-				menu.mOpen(mainMenu, -1);
-		}
+        engine.nextpage(delta);
+    }
 
-		process(delta);
+    @Override
+    public boolean gameKeyDown(GameKey gameKey) {
+        if (GameKeys.Show_Console.equals(gameKey)) {
+            Console.out.onToggle();
+            return true;
+        }
 
-		if (cfg.gShowFPS)
-			engine.printfps(cfg.gFpsScale);
+        if (GameKeys.Menu_Toggle.equals(gameKey) && !menu.isShowing()) {
+            game.pMenu.mOpen(mainMenu, -1);
+            return true;
+        }
+        return false;
+    }
 
-		engine.nextpage();
-	}
+    @Override
+    public InputListener getInputListener() {
+        if (Console.out.isShowing()) {
+            return Console.out;
+        }
 
-	@Override
-	public void pause () {
-		if (BuildGdx.graphics.getFrameType() == FrameType.GL)
-			BuildGdx.graphics.extra(Option.GLDefConfiguration);
-	}
+        if (game.pMenu.isShowing()) {
+            return game.pMenu;
+        }
 
-	@Override
-	public void resume () {
-		game.updateColorCorrection();
-	}
+        return this;
+    }
 }

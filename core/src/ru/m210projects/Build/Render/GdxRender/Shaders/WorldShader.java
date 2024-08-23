@@ -1,8 +1,25 @@
+// This file is part of BuildGDX.
+// Copyright (C) 2023-2024 Alexander Makarov-[M210] (m210-2007@mail.ru)
+//
+// BuildGDX is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// BuildGDX is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with BuildGDX.  If not, see <http://www.gnu.org/licenses/>.
+
 package ru.m210projects.Build.Render.GdxRender.Shaders;
 
 public class WorldShader {
 
-	public static final String vertex = "#ifdef GL_ES\n" //
+	public static final String vertex =
+			"#ifdef GL_ES\n" //
 			+ "#define LOWP lowp\n" //
 			+ "    precision mediump float;\n" //
 			+ "#else\n" //
@@ -32,13 +49,17 @@ public class WorldShader {
 			+ "    if(u_mirror)\n" //
 			+ "        gl_Position.x *= -1.0;\n" //
 			+ "    v_dist = mv.z / mv.w;\n" //
-			+ "};\n" //
-			+ ""; //
+			+ "}\n"; //
 
-	public static final String fragment = "uniform sampler2D u_texture;\n" //
+	public static final String fragment =
+			"#ifdef GL_ES\n" //
+			+ "	precision mediump float;\n" //
+			+ "	precision mediump int;\n" //
+			+ "#endif\n" //
+			+ "\n" //
+			+ "uniform sampler2D u_texture;\n" //
 			+ "uniform sampler2D u_palette;\n" //
 			+ "uniform sampler2D u_palookup;\n" //
-			+ "\n" //
 			+ "uniform int u_numshades;\n" //
 			+ "uniform float u_visibility;\n" //
 			+ "uniform int u_shade;\n" //
@@ -68,7 +89,7 @@ public class WorldShader {
 			+ "    \n" //
 			+ "    vec4 worldCoords = u_invProjectionView * ndc;\n" //
 			+ "    worldCoords.xyz /= worldCoords.w;\n" //
-			+ "    worldCoords.xyz *= vec3(512.0, 512.0, 8192.0); // BuildEngine coords scale\n" //
+			+ "    worldCoords.xyz *= vec3(512.0, 512.0, 8192.0); // Engine coords scale\n" //
 			+ "    worldCoords.w = 1.0;\n" //
 			+ "    return worldCoords;\n" //
 			+ "}\n" //
@@ -132,7 +153,7 @@ public class WorldShader {
 			+ "    \n" //
 			+ "    vec4 worldCoords = u_invProjectionView * ndc;\n" //
 			+ "    worldCoords.xyz /= worldCoords.w;\n" //
-			+ "    worldCoords.xyz *= vec3(512.0, 512.0, 8192.0); // BuildEngine coords scale\n" //
+			+ "    worldCoords.xyz *= vec3(512.0, 512.0, 8192.0); // Engine coords scale\n" //
 			+ "    worldCoords.w = 1.0;\n" //
 			+ "    return worldCoords;\n" //
 			+ "}\n" //
