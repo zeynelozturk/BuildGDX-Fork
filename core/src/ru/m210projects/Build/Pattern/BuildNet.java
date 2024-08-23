@@ -1,18 +1,37 @@
+// This file is part of BuildGDX.
+// Copyright (C) 2023-2024 Alexander Makarov-[M210] (m210-2007@mail.ru)
+//
+// BuildGDX is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// BuildGDX is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with BuildGDX.  If not, see <http://www.gnu.org/licenses/>.
+
 package ru.m210projects.Build.Pattern;
 
 import static ru.m210projects.Build.Engine.*;
 import static ru.m210projects.Build.Gameutils.*;
-import static ru.m210projects.Build.Net.Mmulti.*;
-import static ru.m210projects.Build.OnSceenDisplay.Console.OSDTEXT_YELLOW;
+import static ru.m210projects.Build.net.Mmulti.*;
 import static ru.m210projects.Build.Pragmas.klabs;
 import static ru.m210projects.Build.Pragmas.ksgn;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.Arrays;
 
-import ru.m210projects.Build.Architecture.BuildGdx;
-import ru.m210projects.Build.OnSceenDisplay.Console;
-import ru.m210projects.Build.Pattern.BuildGame.NetMode;
+import com.badlogic.gdx.Gdx;
+import ru.m210projects.Build.Types.Serializable;
+import ru.m210projects.Build.osd.Console;import ru.m210projects.Build.Pattern.BuildGame.NetMode;
+import ru.m210projects.Build.Timer;
 import ru.m210projects.Build.Types.LittleEndian;
+import ru.m210projects.Build.osd.OsdColor;
 
 public abstract class BuildNet {
 	
@@ -23,7 +42,7 @@ public abstract class BuildNet {
 		
 		int PutInput(byte[] p, int offset, NetInput oldInput);
 		
-		void Reset();
+		void reset();
 		
 		NetInput Copy(NetInput src);
 		
@@ -66,6 +85,7 @@ public abstract class BuildNet {
 	public byte[] packbuf = new byte[MAXPAKSIZ];
 	
 	public int[] gChecksum = new int[4]; //CheckSize XXX
+	private final ChecksumStream gChecksumStream = new ChecksumStream();
 	public final int CheckSize = 4 * 4;
 	public byte[] tempCheck = new byte[CheckSize];
 	public byte[][] gCheckFifo = new byte[MAXPLAYERS][CheckSize * kNetFifoSize];
@@ -81,9 +101,11 @@ public abstract class BuildNet {
 	{
 		this.game = game;
 		gInput = newInstance();
-		for(int i = 0; i < MAXPLAYERS; i++)
-			for(int j = 0; j < kNetFifoSize; j++)
+		for(int i = 0; i < MAXPLAYERS; i++) {
+			for(int j = 0; j < kNetFifoSize; j++) {
 				gFifoInput[j][i] = newInstance();
+			}
+		}
 	}
 	
 	public abstract NetInput newInstance();
@@ -96,8 +118,11 @@ public abstract class BuildNet {
 	{
 		for(int i=connecthead;i>=0;i=connectpoint2[i])
 		{
-			if (i != myconnectindex) 
-				while(!canSend(i));
+			if (i != myconnectindex) {
+				while(!canSend(i)) {
+					;
+				}
+			}
 		}
 	}
 	
@@ -152,7 +177,7 @@ public abstract class BuildNet {
 		{
 			if ( i != myconnectindex )
 			{
-				gFifoInput[gNetFifoHead[i] & kFifoMask][i].Reset();
+				gFifoInput[gNetFifoHead[i] & kFifoMask][i].reset();
 				ptr = gFifoInput[gNetFifoHead[i] & kFifoMask][i].GetInput(p, ptr, gFifoInput[(gNetFifoHead[i] - 1) & kFifoMask][i]);
 				gNetFifoHead[i]++;
 			}
@@ -170,8 +195,9 @@ public abstract class BuildNet {
 			for ( int i = connectpoint2[connecthead]; i >= 0; i = connectpoint2[i] )
 			{
 				int lag = p[ptr++];
-				if ( i == myconnectindex )
+				if ( i == myconnectindex ) {
 					otherMinLag = lag;
+				}
 			}
 		}
 		
@@ -195,7 +221,7 @@ public abstract class BuildNet {
 	
  	protected int GetSlavePacket(byte[] p, int ptr, int len, int nPlayer)
 	{
-		gFifoInput[gNetFifoHead[nPlayer] & kFifoMask][nPlayer].Reset();
+		gFifoInput[gNetFifoHead[nPlayer] & kFifoMask][nPlayer].reset();
 		ptr = gFifoInput[gNetFifoHead[nPlayer] & kFifoMask][nPlayer].GetInput(p, ptr, gFifoInput[(gNetFifoHead[nPlayer] - 1) & kFifoMask][nPlayer]);
 		gNetFifoHead[nPlayer]++;
 
@@ -213,17 +239,19 @@ public abstract class BuildNet {
 		retransmit(nPlayer, packbuf, len);
 		
 		nPlayer = LittleEndian.getInt(p, ptr);
-		if(nPlayer == myconnectindex)
+		if(nPlayer == myconnectindex) {
 			game.ThrowError("nPlayer != myconnectindex");
+		}
 		
 		WaitForAllPlayers(1000);
 
-		if(deletePlayerSprite != null && game.nNetMode != NetMode.Single)
+		if(deletePlayerSprite != null && game.nNetMode != NetMode.Single) {
 			deletePlayerSprite.invoke(nPlayer);
+		}
 		
 		if ( nPlayer == connecthead ) {
 			connecthead = connectpoint2[connecthead];
-			BuildGdx.app.postRunnable(new Runnable() {
+			Gdx.app.postRunnable(new Runnable() {
 				@Override
 				public void run() {
 					NetDisconnect(myconnectindex);
@@ -231,7 +259,7 @@ public abstract class BuildNet {
 			});
 			return 1;
 		}
-		else
+		else {
 			for ( int j = connecthead; j >= 0; j = connectpoint2[j] )
 			{
 				if ( connectpoint2[j] == nPlayer )
@@ -240,23 +268,28 @@ public abstract class BuildNet {
 					break;
 				}
 			}
+		}
 
-		if(numplayers > 1) 
+		if(numplayers > 1) {
 			numplayers--;
+		}
 		
-		if(numplayers < 2)
+		if(numplayers < 2) {
 			game.nNetMode = NetMode.Single;
+		}
 
-		if(!WaitForAllPlayers(0))
+		if(!WaitForAllPlayers(0)) {
 			return -1;
+		}
 		
 		return 1;
 	}
 	
 	public int GetPacket(byte[] p, int pptr, byte[] v, int vptr, int size)
 	{
-		if(pptr + size >= p.length)
+		if(pptr + size >= p.length) {
 			game.ThrowError("ptr + size < packbuf.length");
+		}
 		System.arraycopy(p, pptr, v, vptr, size); //memcpy(v, p, size);
 		return pptr + size;
 	}
@@ -269,8 +302,9 @@ public abstract class BuildNet {
 
 	public int PutPacket(byte[] p, int ptr, Object v, int vptr, int size)
 	{
-		if(ptr + size > p.length)
+		if(ptr + size > p.length) {
 			game.ThrowError("ptr + size < packbuf.length");
+		}
 		if(v instanceof byte[])
 		{
 			byte[] array = (byte[]) v;
@@ -293,8 +327,12 @@ public abstract class BuildNet {
 	{
 		for(int i=connecthead;i>=0;i=connectpoint2[i])
 		{
-			if (i != myconnectindex) sendpacket(i,bufptr,messleng);
-			if (myconnectindex != connecthead) break; //slaves in M/S mode only send to master
+			if (i != myconnectindex) {
+				sendpacket(i,bufptr,messleng);
+			}
+			if (myconnectindex != connecthead) {
+				break; //slaves in M/S mode only send to master
+			}
 		}
 	}
 
@@ -302,15 +340,20 @@ public abstract class BuildNet {
 	{
 		//Slaves in M/S mode only send to master
 		//Master re-transmits message to all others
-		if (myconnectindex == connecthead)
-			for(int i=connectpoint2[connecthead];i>=0;i=connectpoint2[i])
-				if (i != nPlayer) 
-					sendpacket(i,bufptr,messleng);
+		if (myconnectindex == connecthead) {
+			for(int i=connectpoint2[connecthead];i>=0;i=connectpoint2[i]) {
+				if (i != nPlayer) {
+					sendpacket(i, bufptr, messleng);
+				}
+			}
+		}
 	}
 	
 	public void GetNetworkInput()
 	{
-		if(numplayers < 2) return;
+		if(numplayers < 2) {
+			return;
+		}
 		
 		for ( int nPlayer = connecthead; nPlayer >= 0; nPlayer = connectpoint2[nPlayer] )
 		{
@@ -323,8 +366,11 @@ public abstract class BuildNet {
 		if ( (gNetFifoHead[myconnectindex] & 15) == 0 )
 		{
 			int i = myMaxLag - bufferJitter; myMaxLag = 0;
-			if ( i > 0 ) bufferJitter += (2 + i) >> 2;
-			else if ( i < 0 ) bufferJitter -= (2 - i) >> 2;
+			if ( i > 0 ) {
+				bufferJitter += (2 + i) >> 2;
+			} else if ( i < 0 ) {
+				bufferJitter -= (2 - i) >> 2;
+			}
 		}
 
 		// am I a slave
@@ -343,15 +389,21 @@ public abstract class BuildNet {
 			if ( (gNetFifoHead[myconnectindex] & 15) == 0 )
 			{
 				int i = myMinLag[connecthead] - otherMinLag;
-				if (klabs(i) > 8) i >>= 1;
-	            else if (klabs(i) > 2) i = ksgn(i);
-	            else i = 0;
+				if (klabs(i) > 8) {
+					i >>= 1;
+				} else if (klabs(i) > 2) {
+					i = ksgn(i);
+				} else {
+					i = 0;
+				}
 
-				totalclock -= game.pEngine.ticks * i;
+				Timer timer = game.pEngine.getTimer();
+				timer.setTotalClock(timer.getTotalClock() - game.pEngine.getTimer().getFrameTicks() * i);
 	            otherMinLag += i;
 
-				for ( int nPlayer = connecthead; nPlayer >= 0; nPlayer = connectpoint2[nPlayer] )
+				for ( int nPlayer = connecthead; nPlayer >= 0; nPlayer = connectpoint2[nPlayer] ) {
 					myMinLag[nPlayer] = 0x7FFFFFFF;
+				}
 			}
 
 			while ( gSendCheckTail < gCheckHead[myconnectindex] )
@@ -372,8 +424,9 @@ public abstract class BuildNet {
 				// send empty packets to slaves that are behind
 				// this fixes (?) problems resulting from missed slave packets
 				PutPacketByte(packbuf, 0, kPacketEmpty);
-				for (i=connectpoint2[connecthead]; i >= 0; i = connectpoint2[i] )
+				for (i=connectpoint2[connecthead]; i >= 0; i = connectpoint2[i] ) {
 					sendpacket(i, packbuf, 1);
+				}
 				return;
 			}
 		}
@@ -381,24 +434,29 @@ public abstract class BuildNet {
 		// I must be the Master
 		while(true)
 		{
-			for ( int i = connecthead; i >= 0; i = connectpoint2[i] )
-				if ( gNetFifoHead[i] <= gNetFifoMasterTail )
+			for ( int i = connecthead; i >= 0; i = connectpoint2[i] ) {
+				if ( gNetFifoHead[i] <= gNetFifoMasterTail ) {
 					return;
+				}
+			}
 
 			// build master packet
 			int ptr = PutPacketByte(packbuf, 0, kPacketMasterFrame);
 
-			for ( int nPlayer = connecthead; nPlayer >= 0; nPlayer = connectpoint2[nPlayer] ) 
+			for ( int nPlayer = connecthead; nPlayer >= 0; nPlayer = connectpoint2[nPlayer] ) {
 				ptr = gFifoInput[gNetFifoMasterTail & kFifoMask][nPlayer].PutInput(packbuf, ptr, gFifoInput[(gNetFifoMasterTail - 1) & kFifoMask][nPlayer]);
+			}
 
 			// include timer lag info every 16 packets
 			if ( (gNetFifoMasterTail & 15) == 0 )
 			{
-				for ( int nPlayer = connectpoint2[connecthead]; nPlayer >= 0; nPlayer = connectpoint2[nPlayer] )
+				for ( int nPlayer = connectpoint2[connecthead]; nPlayer >= 0; nPlayer = connectpoint2[nPlayer] ) {
 					ptr = PutPacketByte(packbuf, ptr, BClipRange(myMinLag[nPlayer], -128, 127));
+				}
 	
-				for ( int nPlayer = connecthead; nPlayer >= 0; nPlayer = connectpoint2[nPlayer] )
+				for ( int nPlayer = connecthead; nPlayer >= 0; nPlayer = connectpoint2[nPlayer] ) {
 					myMinLag[nPlayer] = 0x7FFFFFFF;
+				}
 			}
 	
 			while ( gSendCheckTail < gCheckHead[myconnectindex] )
@@ -407,8 +465,9 @@ public abstract class BuildNet {
 				gSendCheckTail++;
 			}
 	
-			for ( int nPlayer = connectpoint2[connecthead]; nPlayer >= 0; nPlayer = connectpoint2[nPlayer] )
+			for ( int nPlayer = connectpoint2[connecthead]; nPlayer >= 0; nPlayer = connectpoint2[nPlayer] ) {
 				sendpacket(nPlayer, packbuf, ptr);
+			}
 	
 			gNetFifoMasterTail++;
 		}
@@ -416,7 +475,7 @@ public abstract class BuildNet {
 	
 	public void NetDisconnect(int nPlayer)
 	{
-		Console.Println("Disconnected!", OSDTEXT_YELLOW);
+		Console.out.println("Disconnected!", OsdColor.YELLOW);
 		if ( numplayers > 1 )
 		{
 		    packbuf[0] = kPacketDisconnect;
@@ -439,26 +498,27 @@ public abstract class BuildNet {
 		Arrays.fill(gChecksum, 0);
 		Arrays.fill(gCheckHead, 0);
 		Arrays.fill(tempCheck, (byte)0);
-		for(int i = 0; i < MAXPLAYERS; i++)
+		for(int i = 0; i < MAXPLAYERS; i++) {
 			Arrays.fill(gCheckFifo[i], (byte)0);
+		}
 		ready2send = false;
 	}
 	
-	public void ResetTimers()
-	{
-		game.pEngine.sampletimer(); //update timer before reset
-		
-		totalclock = 0;
+	public void ResetTimers() {
+//		game.pEngine.getTimer().update(0); //update timer before reset
+		game.pEngine.getTimer().reset();
+		game.getProcessor().resetPollingStates();
 		ototalclock = 0;
 		gNetFifoMasterTail = 0;
 		gPredictTail = 0;
 		gNetFifoTail = 0;
-		gInput.Reset();
+		gInput.reset();
 		Arrays.fill(gNetFifoHead, 0);
 		for(int i = 0; i < MAXPLAYERS; i++) {
 			Arrays.fill(gCheckFifo[i], (byte)0);
-			for(int j = 0; j < kNetFifoSize; j++)
-				gFifoInput[j][i].Reset();
+			for(int j = 0; j < kNetFifoSize; j++) {
+				gFifoInput[j][i].reset();
+			}
 		}
 		Arrays.fill(gCheckHead, 0);
 		gCheckTail = 0;
@@ -474,12 +534,17 @@ public abstract class BuildNet {
 	
 	public boolean WaitForAllPlayers(int timeout)
 	{
-		if (numplayers < 2) return true;
+		if (numplayers < 2) {
+			return true;
+		}
 
 		for(int i=connecthead;i>=0;i=connectpoint2[i])
 		{
-			if (i != myconnectindex) 
-				while(!canSend(i));
+			if (i != myconnectindex) {
+				while(!canSend(i)) {
+					;
+				}
+			}
 		}
 		
 		packbuf[0] = kPacketSlaveProfile;
@@ -489,12 +554,12 @@ public abstract class BuildNet {
 		long starttime = System.currentTimeMillis();
 		while (true)
 		{
-			game.pEngine.handleevents();
+//			game.pEngine.handleevents();
 			long time = System.currentTimeMillis() - starttime;
 			
 			if (/*ctrlKeyStatusOnce(Keys.ESCAPE) || */(timeout != 0 && time > timeout)) 
 			{
-				Console.Println("Connection timed out!", OSDTEXT_YELLOW);
+				Console.out.println("Connection timed out!", OsdColor.YELLOW);
 				return false;
 			}
 			
@@ -510,7 +575,9 @@ public abstract class BuildNet {
 			int i;
 			for(i=connecthead;i>=0;i=connectpoint2[i])
 			{
-				if (playerReady[i] < playerReady[myconnectindex]) break;
+				if (playerReady[i] < playerReady[myconnectindex]) {
+					break;
+				}
 				if (myconnectindex != connecthead) { i = -1; break; } //slaves in M/S mode only wait for master
 			}
 			if (i < 0) {
@@ -519,7 +586,11 @@ public abstract class BuildNet {
 			}
 		}
 	}
-	
+
+	public long checksum(Serializable obj) {
+		return gChecksumStream.checksum(obj);
+	}
+
 	public long Checksum( byte[] p, int length )
 	{
 		int ptr = 0;
@@ -537,15 +608,17 @@ public abstract class BuildNet {
 	{
 		int nPlayer;
 
-		if ( numplayers == 1 )
+		if ( numplayers == 1 ) {
 			return;
+		}
 
 		while ( true )
 		{
 			for ( nPlayer = connecthead; nPlayer >= 0; nPlayer = connectpoint2[nPlayer] )
 			{
-				if ( gCheckHead[nPlayer] <= gCheckTail )
+				if ( gCheckHead[nPlayer] <= gCheckTail ) {
 					return;
+				}
 			}
 			
 			bOutOfSync = false;
@@ -572,11 +645,37 @@ public abstract class BuildNet {
 		{
 			public void run()
 			{
-				if(!WaitForAllPlayers(timeout)) 
+				if(!WaitForAllPlayers(timeout)) {
 					game.pNet.NetDisconnect(myconnectindex);
+				}
 			}
 		});
 		inet.waitThread.start();
 	}
 
+	private static class ChecksumStream extends ByteArrayOutputStream {
+
+		public long checksum(Serializable obj) {
+			this.count = 0;
+			try {
+				obj.writeObject(this);
+			} catch (IOException e) {
+				return 0;
+			}
+
+			int ptr = 0;
+			count >>= 2;
+			long sum = 0;
+			while ( (--count) != -1 ) {
+				int b0 = buf[ptr++] & 0xFF;
+				int b1 = buf[ptr++] & 0xFF;
+				int b2 = buf[ptr++] & 0xFF;
+				long b3 = buf[ptr++] & 0xFF;
+
+				sum += (b3 << 24 ) + ( b2 << 16 ) + ( b1 << 8 ) + (b0);
+			}
+
+			return sum;
+		}
+	}
 }

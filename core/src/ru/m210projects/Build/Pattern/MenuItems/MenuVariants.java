@@ -16,51 +16,62 @@
 
 package ru.m210projects.Build.Pattern.MenuItems;
 
-import static ru.m210projects.Build.Engine.*;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Input.Keys;
-
 import ru.m210projects.Build.Engine;
-import ru.m210projects.Build.Pattern.BuildFont;
-import ru.m210projects.Build.Pattern.BuildFont.TextAlign;
-import ru.m210projects.Build.Pattern.MenuItems.MenuHandler.MenuOpt;
+import ru.m210projects.Build.Types.ConvertType;
+import ru.m210projects.Build.Types.Transparent;
+import ru.m210projects.Build.Types.font.Font;
+import ru.m210projects.Build.Types.font.TextAlign;
+import ru.m210projects.Build.input.InputListener;
 
-public abstract class MenuVariants extends MenuTitle
-{
-	public MenuVariants(Engine draw, String text, BuildFont font, int x, int y) {
-		super(draw, text, font, x, y, -1);
-		this.flags = 3 | 4;
-	}
+public abstract class MenuVariants extends MenuTitle implements InputListener {
+    public MenuVariants(Engine draw, String text, Font font, int x, int y) {
+        super(draw, text, font, x, y, -1);
+        this.flags = 3 | 4;
+    }
 
-	@Override
-	public void draw(MenuHandler handler) {
-		if ( text != null )
-		    font.drawText(x, y - font.getHeight() / 2, text, handler.getShade(this), pal, TextAlign.Center, 2, fontShadow);
-		
-		handler.mPostDraw(this);
-	}
-	
-	@Override
-	public boolean callback(MenuHandler handler, MenuOpt opt) {
-		if(getInput().getKey(Keys.Y) != 0 || opt == MenuOpt.ENTER || opt == MenuOpt.LMB) {
-			positive(handler);
-		    getInput().setKey(Keys.Y, 0);
-		}
-		if(getInput().getKey(Keys.N) != 0 || opt == MenuOpt.ESC || opt == MenuOpt.RMB) {
-			negative(handler);
-			getInput().setKey(Keys.N, 0);
-		}
-		return false;
-	}
+    @Override
+    public void draw(MenuHandler handler) {
+        if (text != null) {
+            font.drawTextScaled(handler.getRenderer(), x, y - font.getSize() / 2, text, 1.0f, handler.getShade(this), pal, TextAlign.Center, Transparent.None, ConvertType.Normal, fontShadow);
+        }
 
-	public abstract void positive(MenuHandler handler);
-	
-	public void negative(MenuHandler handler)
-	{
-		handler.mMenuBack();
-	}
+        handler.mPostDraw(this);
+    }
 
-	@Override
-	public boolean mouseAction(int x, int y) {
-		return false;
-	}
+    public abstract void positive(MenuHandler handler);
+
+    public void negative(MenuHandler handler) {
+        handler.mMenuBack();
+    }
+
+    @Override
+    public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+        switch (button) {
+            case Input.Buttons.LEFT:
+                positive(menuHandler);
+                return true;
+            case Input.Buttons.RIGHT:
+                negative(menuHandler);
+                return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean keyDown(int keycode) {
+        switch (keycode) {
+            case Keys.Y:
+            case Keys.ENTER:
+            case Keys.BUTTON_A:
+                positive(menuHandler);
+                return true;
+            case Keys.N:
+            case Keys.ESCAPE:
+                negative(menuHandler);
+                return true;
+        }
+        return false;
+    }
 }

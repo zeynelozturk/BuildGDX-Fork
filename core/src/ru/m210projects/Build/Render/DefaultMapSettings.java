@@ -1,20 +1,36 @@
+// This file is part of BuildGDX.
+// Copyright (C) 2023-2024 Alexander Makarov-[M210] (m210-2007@mail.ru)
+//
+// BuildGDX is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// BuildGDX is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with BuildGDX.  If not, see <http://www.gnu.org/licenses/>.
+
 package ru.m210projects.Build.Render;
 
-import static ru.m210projects.Build.Engine.sector;
 import static ru.m210projects.Build.Engine.show2dsector;
-import static ru.m210projects.Build.Engine.sprite;
-import static ru.m210projects.Build.Engine.wall;
-import static ru.m210projects.Build.Engine.yxaspect;
 import static ru.m210projects.Build.Gameutils.BClipRange;
 import static ru.m210projects.Build.Pragmas.klabs;
-import static ru.m210projects.Build.Pragmas.mulscale;
 
-import ru.m210projects.Build.Gameutils;
-import ru.m210projects.Build.Types.SECTOR;
-import ru.m210projects.Build.Types.SPRITE;
-import ru.m210projects.Build.Types.WALL;
+import ru.m210projects.Build.BoardService;
+import ru.m210projects.Build.Types.Sector;
+import ru.m210projects.Build.Types.Sprite;
+import ru.m210projects.Build.Types.Wall;
 
 public class DefaultMapSettings implements IOverheadMapSettings {
+
+	protected final BoardService boardService;
+	public DefaultMapSettings(BoardService boardService) {
+		this.boardService = boardService;
+	}
 
 	@Override
 	public boolean isShowSprites(MapView view) {
@@ -38,10 +54,11 @@ public class DefaultMapSettings implements IOverheadMapSettings {
 
 	@Override
 	public boolean isSpriteVisible(MapView view, int index) {
-		if (view == MapView.Polygons)
+		if (view == MapView.Polygons) {
 			return false;
+		}
 
-		switch (sprite[index].cstat & 48) {
+		switch (boardService.getSprite(index).getCstat() & 48) {
 		case 0:
 			return true;
 		case 16: // wall sprites
@@ -54,19 +71,21 @@ public class DefaultMapSettings implements IOverheadMapSettings {
 
 	@Override
 	public boolean isWallVisible(int w, int s) {
-		WALL wal = wall[w];
-		SECTOR sec = sector[s];
-		if (wal.nextsector != 0) // red wall
-			return (wal.nextwall <= w && ((sector[wal.nextsector].ceilingz != sec.ceilingz //
-					|| sector[wal.nextsector].floorz != sec.floorz //
-					|| ((wal.cstat | wall[wal.nextwall].cstat) & (16 + 32)) != 0) //
-					|| (!isFullMap() && (show2dsector[wal.nextsector >> 3] & 1 << (wal.nextsector & 7)) == 0)));
+		Wall wal = boardService.getWall(w);
+		Sector sec = boardService.getSector(s);
+		if (wal.getNextsector() != 0) // red wall
+		{
+			return (wal.getNextwall() <= w && ((boardService.getSector(wal.getNextsector()).getCeilingz() != sec.getCeilingz() //
+					|| boardService.getSector(wal.getNextsector()).getFloorz() != sec.getFloorz() //
+					|| ((wal.getCstat() | boardService.getWall(wal.getNextwall()).getCstat()) & (16 + 32)) != 0) //
+					|| (!isFullMap() && !show2dsector.getBit(wal.getNextsector()))));
+		}
 		return true;
 	}
 
 	@Override
 	public int getWallColor(int w, int sec) {
-		WALL wal = wall[w];
+		Wall wal = boardService.getWall(w);
 //		if (Gameutils.isValidSector(wal.nextsector)) // red wall
 //			return 31;
 		return 31; // white wall
@@ -74,7 +93,7 @@ public class DefaultMapSettings implements IOverheadMapSettings {
 
 	@Override
 	public int getSpriteColor(int s) {
-		SPRITE spr = sprite[s];
+		Sprite spr = boardService.getSprite(s);
 //		switch (spr.cstat & 48) {
 //		case 0:
 //			return 31;
@@ -95,14 +114,13 @@ public class DefaultMapSettings implements IOverheadMapSettings {
 	@Override
 	public int getPlayerPicnum(int player) {
 		int spr = getPlayerSprite(player);
-		return spr != -1 ? sprite[spr].picnum : -1;
+		return spr != -1 ? boardService.getSprite(spr).getPicnum() : -1;
 	}
 
 	@Override
 	public int getPlayerZoom(int player, int czoom) {
-		SPRITE pPlayer = sprite[getPlayerSprite(player)];
-		int nZoom = mulscale(yxaspect,
-				czoom * (klabs((sector[pPlayer.sectnum].floorz - pPlayer.z) >> 8) + pPlayer.yrepeat), 16);
+		Sprite pPlayer = boardService.getSprite(getPlayerSprite(player));
+		int nZoom = czoom * (klabs((boardService.getSector(pPlayer.getSectnum()).getFloorz() - pPlayer.getZ()) >> 8) + pPlayer.getYrepeat());
 		return BClipRange(nZoom, 22000, 0x20000);
 	}
 
@@ -123,26 +141,26 @@ public class DefaultMapSettings implements IOverheadMapSettings {
 
 	@Override
 	public int getSpriteX(int spr) {
-		return sprite[spr].x;
+		return boardService.getSprite(spr).getX();
 	}
 
 	@Override
 	public int getSpriteY(int spr) {
-		return sprite[spr].y;
+		return boardService.getSprite(spr).getY();
 	}
 
 	@Override
 	public int getSpritePicnum(int spr) {
-		return sprite[spr].picnum;
+		return boardService.getSprite(spr).getPicnum();
 	}
 
 	@Override
 	public int getWallX(int w) {
-		return wall[w].x;
+		return boardService.getWall(w).getX();
 	}
 
 	@Override
 	public int getWallY(int w) {
-		return wall[w].y;
+		return boardService.getWall(w).getY();
 	}
 }

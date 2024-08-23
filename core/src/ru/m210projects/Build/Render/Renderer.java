@@ -16,84 +16,152 @@
 
 package ru.m210projects.Build.Render;
 
-import java.nio.ByteBuffer;
-
-import ru.m210projects.Build.Architecture.BuildFrame.FrameType;
+import ru.m210projects.Build.Engine;
 import ru.m210projects.Build.Render.TextureHandle.TileData.PixelFormat;
+import ru.m210projects.Build.Render.Types.ScreenFade;
 import ru.m210projects.Build.Script.DefScript;
-import ru.m210projects.Build.Types.TileFont;
+import ru.m210projects.Build.Types.PaletteManager;
+import ru.m210projects.Build.Types.Transparent;
+import ru.m210projects.Build.Types.font.Font;
+import ru.m210projects.Build.Types.font.TextAlign;
+import ru.m210projects.Build.filehandle.art.ArtEntry;
+import ru.m210projects.Build.filehandle.art.DynamicArtEntry;
+import ru.m210projects.Build.filehandle.fs.Directory;
+
+import java.io.OutputStream;
 
 public interface Renderer {
 
-	enum RenderType {
-		Software(FrameType.Canvas, "Classic"), Polymost(FrameType.GL, "Polymost"), PolyGDX(FrameType.GL, "PolyGDX");
+    PixelFormat getTexFormat();
 
-		FrameType type;
-		String name;
+    void init(Engine engine);
 
-		RenderType(FrameType type, String name) {
-			this.type = type;
-			this.name = name;
-		}
+    void uninit();
 
-		public FrameType getFrameType() {
-			return type;
-		}
+    boolean isInited();
 
-		public String getName() {
-			return name;
-		}
-	}
+    void resize(int width, int height);
 
-    enum Transparent {
-		None, Bit1, Bit2
-	}
+    int getWidth();
 
-	PixelFormat getTexFormat();
+    int getHeight();
 
-	void init();
+    void drawmasks();
 
-	void uninit();
+    int drawrooms(float daposx, float daposy, float daposz, float daang, float dahoriz, int dacursectnum);
 
-	boolean isInited();
+    void clearview(int dacol);
 
-	void drawmasks();
+    void changepalette(byte[] palette);
 
-	void drawrooms();
+    /**
+     * Renderer next frame. Should be call manually, if don't use RenderChanger
+     */
+    void nextpage();
 
-	void clearview(int dacol);
+    void setview(int x1, int y1, int x2, int y2);
 
-	void changepalette(byte[] palette);
+    void setFieldOfView(int fovDegrees);
 
-	void nextpage();
+    void setaspect();
 
-	void setview(int x1, int y1, int x2, int y2);
+    /**
+     dastat&1 :translucence
+     dastat&2 :auto-scale mode (use 320*200 coordinates)
+     dastat&4 :y-flip
+     dastat&8 :don't clip to startumost/startdmost
+     dastat&16 :force point passed to be top-left corner, 0:Editart center
+     dastat&32 :reverse translucence
+     dastat&64 :non-masked, 0:masked
+     dastat&128 :draw all pages (permanent)
+     dastat&256 :align to the left (widescreen support)
+     dastat&512 :align to the right (widescreen support)
+     dastat&1024 :stretch to screen resolution (distorts aspect ration)
+     */
 
-	void invalidatetile(int tilenume, int pal, int how);
-
-	void rotatesprite(int sx, int sy, int z, int a, int picnum, int dashade, int dapalnum, int dastat, int cx1,
+    void rotatesprite(int sx, int sy, int z, int a, int picnum, int dashade, int dapalnum, int dastat, int cx1,
                       int cy1, int cx2, int cy2);
 
-	void completemirror();
+    void rotatesprite(int sx, int sy, int z, int a, int picnum, int dashade, int dapalnum, int dastat);
 
-	void drawoverheadmap(int cposx, int cposy, int czoom, short cang);
+    Mirror preparemirror(int dax, int day, int daz, float daang, float dahoriz, int dawall, int dasector);
 
-	void drawmapview(int dax, int day, int zoome, int ang);
+    void completemirror();
 
-	void printext(TileFont font, int xpos, int ypos, char[] text, int col, int shade, Transparent bit,
-                  float scale);
+    void drawoverheadmap(int cposx, int cposy, int czoom, short cang);
 
-	void printext(int xpos, int ypos, int col, int backcol, char[] text, int fontsize, float scale);
+    void drawmapview(int dax, int day, int zoome, int ang);
 
-	ByteBuffer getFrame(PixelFormat format, int xsiz, int ysiz);
+    int printext(Font font, int x, int y, char[] text, float scale, int shade, int palnum, TextAlign align, Transparent transparent, boolean shadow);
 
-	byte[] screencapture(int newwidth, int newheight);
+    boolean screencapture(OutputStream os, int newwidth, int newheight, PixelFormat pixelFormat);
 
-	void drawline256(int x1, int y1, int x2, int y2, int col);
+    String screencapture(Directory dir, String fn);
 
-	void settiltang(int tilt);
+    void drawline256(int x1, int y1, int x2, int y2, int col);
 
-	void setDefs(DefScript defs);
+    void settiltang(int tilt);
 
-	RenderType getType();
+    void setDefs(DefScript defs);
+
+    void showScreenFade(ScreenFade screenFade);
+
+    RenderType getType();
+
+    int animateoffs(int tilenum, int nInfo);
+
+    void setviewtotile(DynamicArtEntry dynamicArtEntry);
+
+    void setviewback();
+
+    ArtEntry getTile(int tileNum);
+
+    int getParallaxScale();
+
+    void setParallaxScale(int parallaxScale);
+
+    int getParallaxOffset();
+
+    void setParallaxOffset(int offset);
+
+    byte[] getRenderedPics();
+
+    byte[] getRenderedSectors();
+
+    RenderedSpriteList getRenderedSprites();
+
+    void addRenderedSprite(int spritenum);
+
+    boolean gotPic(int pic);
+
+    boolean gotSector(int sect);
+
+    PaletteManager getPaletteManager();
+
+    enum RenderType {
+        Software("Classic"), Polymost("Polymost"), PolyGDX("PolyGDX");
+
+        final String name;
+
+        RenderType(String name) {
+            this.name = name;
+        }
+
+        public static RenderType parseType(String name) {
+            switch (name) {
+                case "Classic":
+                case "Software":
+                    return Software;
+                case "Polymost":
+                    return Polymost;
+                case "PolyGDX":
+                    return PolyGDX;
+            }
+            return RenderType.Polymost;
+        }
+
+        public String getName() {
+            return name;
+        }
+    }
 }

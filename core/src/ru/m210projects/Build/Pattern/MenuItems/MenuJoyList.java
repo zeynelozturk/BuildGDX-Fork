@@ -16,261 +16,246 @@
 
 package ru.m210projects.Build.Pattern.MenuItems;
 
-import static ru.m210projects.Build.Engine.getInput;
-import static ru.m210projects.Build.Engine.totalclock;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.controllers.Controller;
+import ru.m210projects.Build.Pattern.BuildGame;
+import ru.m210projects.Build.Types.ConvertType;
+import ru.m210projects.Build.Types.Transparent;
+import ru.m210projects.Build.Types.font.TextAlign;
+import ru.m210projects.Build.input.GameKey;
+import ru.m210projects.Build.input.InputListener;
+import ru.m210projects.Build.input.keymap.ControllerAxis;
+import ru.m210projects.Build.input.keymap.ControllerButton;
+import ru.m210projects.Build.settings.ControllerMapping;
+import ru.m210projects.Build.settings.GameConfig;
+import ru.m210projects.Build.Types.font.Font;
+import ru.m210projects.Build.settings.GameKeys;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import static ru.m210projects.Build.Gameutils.BClipLow;
 import static ru.m210projects.Build.Gameutils.BClipRange;
+import static ru.m210projects.Build.input.GameKey.UNKNOWN_KEY;
 
-import ru.m210projects.Build.Architecture.BuildGdx;
-import ru.m210projects.Build.Input.ButtonMap;
-import ru.m210projects.Build.Input.BuildControllers;
-import ru.m210projects.Build.OnSceenDisplay.Console;
-import ru.m210projects.Build.Pattern.BuildFont;
-import ru.m210projects.Build.Pattern.BuildFont.TextAlign;
-import ru.m210projects.Build.Pattern.BuildGame;
-import ru.m210projects.Build.Pattern.MenuItems.MenuHandler.MenuOpt;
-import ru.m210projects.Build.Settings.BuildConfig.GameKeys;
-import ru.m210projects.Build.Settings.BuildConfig.MenuKeys;
+public class MenuJoyList extends MenuList implements ScrollableMenuItem, InputListener {
 
-public abstract class MenuJoyList extends MenuKeyboardList {
+    protected SliderDrawable slider;
+    protected GameConfig cfg;
+    protected List<String> components = new ArrayList<>();
+    public int l_set = 0;
+    protected int scrollerX, scrollerHeight;
+    protected boolean isLocked;
+    public int pal_left, pal_right, axispal;
 
-	private final BuildControllers gpmanager;
-	public int menupal;
+    public MenuJoyList(BuildGame app, Font font, int x, int y, int width, int rowCount, MenuProc callback) {
+        super(null, font, x, y, width, 0, callback, rowCount);
+        this.slider = app.pSlider;
+        this.cfg = app.pCfg;
 
-	public MenuJoyList(BuildGame app, BuildFont font, int x, int y, int width,
-			int len, MenuProc callback) {
-		super(app.pSlider, app.pCfg, font, x, y, width, len, callback);
-		this.gpmanager = app.pInput.ctrlGetGamepadManager();
-		this.len += cfg.joymap.length;
-	}
+        ControllerAxis[] axes = ControllerAxis.values();
+        for(int i = 1; i < axes.length; i++) {
+            components.add(axes[i].name());
+        }
 
-	@Override
-	public void draw(MenuHandler handler) {
-		int px = x, py = y;
-		boolean offset = false;
-		for(int i = l_nMin; i >= 0 && i < l_nMin + nListItems && i < len; i++) {	
-			int pal = this.pal_left; 
-			int pal2 = this.pal_right; 
-			int shade = handler.getShade(i == l_nFocus? m_pMenu.m_pItems[m_pMenu.m_nFocus] : null);
-			String text;
-			String key;
+        ControllerButton[] buttons = ControllerButton.values();
+        for(int i = 1; i < buttons.length; i++) {
+            components.add(buttons[i].name());
+        }
 
-			if(i < cfg.joymap.length) {
-				text = cfg.joymap[i].getName();
-				pal = menupal;
-			} else {
-				text = keynames[i - cfg.joymap.length].getName();
-				if( i - cfg.joymap.length == GameKeys.Menu_Toggle.getNum() )
-					pal = menupal;
-			}
-		
-			if(l_nMin < cfg.joymap.length && i == cfg.joymap.length) {
-				py += mFontOffset();
-				offset = true;
-			}
-			
-			if(i == l_nFocus)
-				pal2 = pal = handler.getPal(font, m_pMenu.m_pItems[m_pMenu.m_nFocus]);
+        this.len = components.size();
+    }
 
-			if(offset && i >= l_nMin + nListItems - 1)
-				break;
-				
-			if(i < cfg.joymap.length)
-			{
-				key = ButtonMap.buttonName(cfg.gJoyMenukeys[((MenuKeys)cfg.joymap[i]).getJoyNum()]);
-			} else {
-				if(cfg.keymap[i - cfg.joymap.length] instanceof MenuKeys)
-					key = ButtonMap.buttonName(cfg.gJoyMenukeys[((MenuKeys)cfg.keymap[i - cfg.joymap.length]).getJoyNum()]);
-				else if(cfg.gpadkeys[i - cfg.joymap.length] >= 0)
-					key = ButtonMap.buttonName(cfg.gpadkeys[i - cfg.joymap.length]);
-				else key = "N/A";
-			}
+    @Override
+    public void draw(MenuHandler handler) {
+        int px = x, py = y;
+        int totalclock = handler.game.pEngine.getTotalClock();
+        for (int i = l_nMin; i >= 0 && i < l_nMin + rowCount && i < len; i++) {
+            int shade = handler.getShade(i == l_nFocus ? m_pMenu.m_pItems[m_pMenu.m_nFocus] : null);
+            int pal1 = i < 4 ? axispal : this.pal_left;
+            int pal2 = this.pal_right;
 
-			if ( i == l_nFocus ) {
-				if(l_set == 1 && (totalclock & 0x20) != 0)
-				{
-					key = "____";
-				}
-			}
+            if (i == l_nFocus) {
+                pal2 = pal1 = handler.getPal(font, m_pMenu.m_pItems[m_pMenu.m_nFocus]);
+            }
 
-			char[] k = key.toCharArray();
-			
-			font.drawText(px, py, text.toCharArray(), shade, pal, TextAlign.Left, 2, fontShadow);		
-			font.drawText(x + width - slider.getScrollerWidth() - 2 - font.getWidth(k), py, k, shade, pal2, TextAlign.Left, 2, fontShadow);		
-	
-			py += mFontOffset();
-		}
+            ControllerMapping mapping = cfg.getControllerMapping(cfg.getControllerName());
+            String name = components.get(i);
+            String componentName = UNKNOWN_KEY.getName();
+            if (i < 4) {
+                ControllerAxis axis = getAxis(name);
+                int id = mapping.getAxisCode(axis);
+                if (id != -1) {
+                    componentName = "Axis_" + id;
+                }
+            } else {
+                ControllerButton button = getButton(name);
+                int id = mapping.getButtonCode(button);
+                if (id != -1) {
+                    componentName = "Button_" + id;
+                }
+            }
 
-		scrollerHeight = nListItems * mFontOffset();
+            if (i == l_nFocus) {
+                if (l_set == 1 && (totalclock & 0x20) != 0) {
+                    componentName = "____";
+                }
+            }
 
-		//Files scroll
-		int nList = BClipLow(len - nListItems, 1);
-		int posy = y + (scrollerHeight - slider.getScrollerHeight()) * l_nMin / nList;
-		
-		scrollerX = x + width - slider.getScrollerWidth() + 5;
-		slider.drawScrollerBackground(scrollerX, y, scrollerHeight, 0, 0);
-		slider.drawScroller(scrollerX, posy, handler.getShade(isTouched ? m_pMenu.m_pItems[m_pMenu.m_nFocus] : null), 0);
-		
-		handler.mPostDraw(this);
-	}
+            font.drawTextScaled(handler.getRenderer(), px, py, name.toCharArray(), 1.0f, shade, pal1, TextAlign.Left, Transparent.None, ConvertType.Normal, fontShadow);
+            font.drawTextScaled(handler.getRenderer(), x + width - slider.getScrollerWidth() - 2, py, componentName, 1.0f, shade, pal2, TextAlign.Right, Transparent.None, ConvertType.Normal, fontShadow);
 
-	@Override
-	public boolean callback(MenuHandler handler, MenuOpt opt) {
-		if(l_set == 0) {
-			switch(opt)
-			{
-			case MWUP:
-				if(l_nMin > 0)
-					l_nMin--;
-				return false;
-			case MWDW:
-				if(l_nMin < len - nListItems)
-					l_nMin++;
-				return false;
-			case UP:
-				l_nFocus--;
-				if(l_nFocus >= 0 && l_nFocus < l_nMin)
-					l_nMin--;
-				if(l_nFocus < 0) {
-					l_nFocus = len - 1;
-					l_nMin = len - nListItems;
-				}
-				
-				return false;
-			case DW:
-				l_nFocus++;
-				if(l_nFocus >= l_nMin + nListItems && l_nFocus < len)
-					l_nMin++;
-				if(l_nFocus >= len) {
-					l_nFocus = 0;
-					l_nMin = 0;
-				}
-				
-				if(l_nMin < cfg.joymap.length && l_nFocus == l_nMin + nListItems - 1) {
-					l_nMin++;
-				}
+            py += mFontOffset();
+        }
 
-				return false;
-			case ENTER:
-			case LMB:
-				if ( (flags & 4) == 0 ) return false;
-				
-				if(opt == MenuOpt.LMB && isTouched)
-				{
-					if(len <= nListItems)
-						return false;
+        scrollerHeight = rowCount * mFontOffset();
 
-					int nList = BClipLow(len - nListItems, 1);
-					int nRange = scrollerHeight;
-					int py = y;
+        //Files scroll
+        int nList = BClipLow(len - rowCount, 1);
+        int posy = y + (scrollerHeight - slider.getScrollerHeight()) * l_nMin / nList;
 
-					l_nFocus = -1;
-					l_nMin = BClipRange(((touchY - py) * nList) / nRange, 0, nList);
-					
-					return false;
-				}
-				
-				if(l_nFocus != -1 && callback != null) 
-					callback.run(handler, this);
-				
-				getInput().resetKeyStatus();
-				return false;
-			case DELETE:
-				if(l_nFocus == -1) return false;
-				
-				if(l_nFocus < cfg.joymap.length)
-					cfg.gJoyMenukeys[((MenuKeys)cfg.joymap[l_nFocus]).getJoyNum()] = -1;
-				else
-				{
-					int focus = l_nFocus - cfg.joymap.length;
-					cfg.gpadkeys[focus] = -1;
-					if(focus == GameKeys.Show_Console.getNum()) {
-						Console.setCaptureKey(-1, 3);
-					}
-				}
+        scrollerX = x + width - slider.getScrollerWidth() + 5;
+        slider.drawScrollerBackground(scrollerX, y, scrollerHeight, 0, 0);
+        slider.drawScroller(scrollerX, posy, handler.getShade(isLocked ? m_pMenu.m_pItems[m_pMenu.m_nFocus] : null), 0);
 
-				return false;
-			case PGUP:
-				l_nFocus -= (nListItems - 1);
-				if(l_nFocus >= 0 && l_nFocus < l_nMin)
-					if(l_nMin > 0) l_nMin -= (nListItems - 1);
-				if(l_nFocus < 0 || l_nMin < 0) {
-					l_nFocus = 0;
-					l_nMin = 0;
-				}
-				return false;
-			case PGDW:
-				l_nFocus += (nListItems - 1);
-				if(l_nFocus >= l_nMin + nListItems && l_nFocus < len)
-					l_nMin += (nListItems - 1);
-				if(l_nFocus >= len || l_nMin > len - nListItems) {
-					l_nFocus = len - 1;
-					if(len >= nListItems)
-						l_nMin = len - nListItems;
-					else l_nMin = len - 1;
-				}
-				return false;
-			case HOME:
-				l_nFocus = 0;
-				l_nMin = 0;
-				return false;
-			case END:
-				l_nFocus = len - 1;
-				if(len >= nListItems)
-					l_nMin = len - nListItems;
-				else l_nMin = len - 1;
-				return false;
-			default:
-				return m_pMenu.mNavigation(opt);
-			}
-		}
-		else
-		{
-			l_pressedId = opt;
-			if((flags & 4) != 0 && callback != null)
-				callback.run(handler, this);
+        handler.mPostDraw(this);
+    }
 
-			if(l_nFocus == GameKeys.Menu_Toggle.getNum())
-				gpmanager.resetButtonStatus();
+    private ControllerAxis getAxis(String name) {
+        try {
+            return ControllerAxis.valueOf(name);
+        } catch (Exception ignore) {
+        }
+        return ControllerAxis.NULL;
+    }
 
-			return false;
-		}
-	}
+    private ControllerButton getButton(String name) {
+        try {
+            return ControllerButton.valueOf(name);
+        } catch (Exception ignore) {
+        }
+        return ControllerButton.NULL;
+    }
 
-	@Override
-	public boolean mouseAction(int mx, int my) {
-		if(l_set != 0)
-			return false;
-		
-		if(!BuildGdx.input.isTouched()) 
-			isTouched = false;
-				
-		touchY = my;
-		if(mx > scrollerX && mx < scrollerX + slider.getScrollerWidth()) 
-		{
-			isTouched = BuildGdx.input.isTouched();
-			return true;
-		}
+    @Override
+    public boolean gameKeyDown(GameKey gameKey) {
+        if (l_set == 1 && GameKeys.Menu_Toggle.equals(gameKey)) {
+            l_set = 0;
+            return true;
+        }
+        return l_set == 1; // block handler when key setting
+    }
 
-		if(!isTouched) {
-			int py = y;
-			for(int i = l_nMin; i >= 0 && i < l_nMin + nListItems && i < len; i++) {	
-				if(my >= py && my < py + font.getHeight())
-				{
-					if(l_nMin < cfg.joymap.length && i == cfg.joymap.length) 
-						return false;
-	
-					l_nFocus = i;
-					if(l_nMin < cfg.joymap.length && i > cfg.joymap.length) 
-						l_nFocus--;
-	
-					return true;
-				}
-			    
-				py += mFontOffset();
-			}
-		}
+    @Override
+    public boolean keyDown(int keycode) {
+        if (l_set == 1) {
+            if (keycode == Input.Keys.ESCAPE) {
+                l_set = 0;
+            }
+            return true;
+        }
 
-		return false;
-	}
+        if (keycode == Input.Keys.FORWARD_DEL) {
+            ControllerMapping mapping = cfg.getControllerMapping(cfg.getControllerName());
+            if (l_nFocus < 4) {
+                mapping.removeAxis(getAxis(components.get(l_nFocus)));
+            } else {
+                mapping.removeButton(getButton(components.get(l_nFocus)));
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean buttonDown(Controller controller, int buttonCode) {
+        if (l_set == 1 && l_nFocus > 3) {
+            ControllerMapping mapping = cfg.getControllerMapping(controller.getName());
+            ControllerButton button = getButton(components.get(l_nFocus));
+            if (button != ControllerButton.NULL) {
+                mapping.putButton(button, buttonCode);
+                l_set = 0;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean axisMoved(Controller controller, int axisCode, float value) {
+        if (l_set == 1 && l_nFocus < 4 && value >= 0.5f) {
+            ControllerMapping mapping = cfg.getControllerMapping(controller.getName());
+            ControllerAxis axis = getAxis(components.get(l_nFocus));
+            if (axis != ControllerAxis.NULL) {
+                mapping.putAxis(axis, axisCode);
+                l_set = 0;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean mouseAction(int mx, int my) {
+        if (l_set != 0) {
+            return false;
+        }
+
+        int py = y;
+        for (int i = l_nMin; i >= 0 && i < l_nMin + rowCount && i < len; i++) {
+            if (my >= py && my < py + font.getSize()) {
+                l_nFocus = i;
+                return true;
+            }
+
+            py += mFontOffset();
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean onMoveSlider(MenuHandler handler, int scaledX, int scaledY) {
+        if (isLocked) {
+
+            if (len <= rowCount) {
+                return false;
+            }
+
+            int nList = BClipLow(len - rowCount, 1);
+            int nRange = scrollerHeight;
+            int py = y;
+
+            l_nFocus = -1;
+            l_nMin = BClipRange(((scaledY - py) * nList) / nRange, 0, nList);
+
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean onLockSlider(MenuHandler handler, int mx, int my) {
+        if (l_set != 0) {
+            return false;
+        }
+
+        if (mx > scrollerX && mx < scrollerX + slider.getScrollerWidth()) {
+            isLocked = true;
+            onMoveSlider(handler, mx, my);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public void onUnlockSlider() {
+        isLocked = false;
+    }
+
+    @Override
+    public void close() {
+        // to reset gamestate if key was rebinded
+        menuHandler.game.getProcessor().resetPollingStates();
+    }
 }

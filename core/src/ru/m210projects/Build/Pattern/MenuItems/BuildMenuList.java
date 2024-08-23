@@ -16,20 +16,11 @@
 
 package ru.m210projects.Build.Pattern.MenuItems;
 
-import static ru.m210projects.Build.Input.Keymap.MOUSE_LBUTTON;
-
 import java.util.ArrayList;
 import java.util.List;
 
 import ru.m210projects.Build.Pattern.BuildGame;
-import ru.m210projects.Build.Pattern.MenuItems.BuildMenu;
-import ru.m210projects.Build.Pattern.MenuItems.MenuHandler;
 import ru.m210projects.Build.Pattern.MenuItems.MenuHandler.MenuOpt;
-import ru.m210projects.Build.Pattern.MenuItems.MenuItem;
-import ru.m210projects.Build.Pattern.MenuItems.MenuList;
-import ru.m210projects.Build.Pattern.MenuItems.MenuScroller;
-import ru.m210projects.Build.Pattern.MenuItems.MenuSlider;
-import ru.m210projects.Build.Pattern.MenuItems.MenuTitle;
 
 public abstract class BuildMenuList extends BuildMenu {
 
@@ -41,7 +32,7 @@ public abstract class BuildMenuList extends BuildMenu {
 		protected int l_OldMouseFocus;
 
 		public MenuItemList(int x, int y, int width, int step, int nShowElements) {
-			super(null, null, x, y, width, 0, null, null, nShowElements);
+			super(null, null, x, y, width, 0, null, nShowElements);
 
 			this.m_pItems = new ArrayList<MenuItem>();
 			this.l_step = step;
@@ -55,22 +46,19 @@ public abstract class BuildMenuList extends BuildMenu {
 		}
 
 		public int addItem(final MenuItem pItem, boolean nFirstItem) {
-			if (pItem == null)
+			if (pItem == null) {
 				return -1;
+			}
 
 			pItem.m_pMenu = BuildMenuList.this;
 			m_pItems.add(pItem);
-			if (nFirstItem)
+			if (nFirstItem) {
 				l_nFocus = l_nMin = (short) (m_pItems.size() - 1);
+			}
 
-			pItem.listener = new FocusListener() {
-				@Override
-				public boolean isFocused() {
-					return m_pItems.indexOf(pItem) == l_nFocus;
-				}
-			};
+			pItem.listener = () -> m_pItems.indexOf(pItem) == l_nFocus;
 
-			if (scroller == null && m_pItems.size() > nListItems) {
+			if (scroller == null && m_pItems.size() > rowCount) {
 				scroller = new MenuScroller(app.pSlider, this, width + x - app.pSlider.getScrollerWidth());
 				BuildMenuList.this.addScroller(scroller);
 			}
@@ -79,12 +67,14 @@ public abstract class BuildMenuList extends BuildMenu {
 		}
 
 		public int removeItem(MenuItem pItem) {
-			if (pItem == null)
+			if (pItem == null) {
 				return -1;
+			}
 
 			int i = m_pItems.indexOf(pItem);
-			if (i != -1 && m_pItems.remove(i) == pItem)
+			if (i != -1 && m_pItems.remove(i) == pItem) {
 				return i;
+			}
 
 			return -1;
 		}
@@ -102,7 +92,7 @@ public abstract class BuildMenuList extends BuildMenu {
 		public void draw(MenuHandler handler) {
 			if (m_pItems.size() > 0) {
 				int px = x, py = y;
-				for (int i = l_nMin; i >= 0 && i < l_nMin + nListItems && i < len; i++) {
+				for (int i = l_nMin; i >= 0 && i < l_nMin + rowCount && i < len; i++) {
 					MenuItem pItem = m_pItems.get(i);
 
 					pItem.x = px;
@@ -117,15 +107,17 @@ public abstract class BuildMenuList extends BuildMenu {
 		@Override
 		protected void ListLeft(MenuHandler handler) {
 			MenuItem pItem = m_pItems.get(l_nFocus);
-			if ((pItem.flags & 4) != 0)
+			if ((pItem.flags & 4) != 0) {
 				pItem.callback(handler, MenuOpt.LEFT);
+			}
 		}
 
 		@Override
 		protected void ListRight(MenuHandler handler) {
 			MenuItem pItem = m_pItems.get(l_nFocus);
-			if ((pItem.flags & 4) != 0)
+			if ((pItem.flags & 4) != 0) {
 				pItem.callback(handler, MenuOpt.RIGHT);
+			}
 		}
 
 		@Override
@@ -136,8 +128,9 @@ public abstract class BuildMenuList extends BuildMenu {
 		@Override
 		protected void ListCallback(MenuHandler handler, MenuOpt opt) {
 			MenuItem pItem = m_pItems.get(l_nFocus);
-			if ((pItem.flags & 4) != 0)
+			if ((pItem.flags & 4) != 0) {
 				pItem.callback(handler, opt);
+			}
 		}
 
 		@Override
@@ -148,7 +141,7 @@ public abstract class BuildMenuList extends BuildMenu {
 		@Override
 		public boolean mouseAction(int mx, int my) {
 			if (len > 0) {
-				for (int i = l_nMin; i >= 0 && i < l_nMin + nListItems && i < len; i++) {
+				for (int i = l_nMin; i >= 0 && i < l_nMin + rowCount && i < len; i++) {
 					MenuItem pItem = m_pItems.get(i);
 					if (((pItem.flags & 2) != 0) && pItem.mouseAction(mx, my)) {
 						l_OldMouseFocus = l_nFocus;
@@ -161,8 +154,9 @@ public abstract class BuildMenuList extends BuildMenu {
 		}
 
 		protected boolean mCheckListItemsFlags(int nItem) {
-			if (nItem < 0 || nItem >= m_pItems.size() || m_pItems.get(nItem) == null)
+			if (nItem < 0 || nItem >= m_pItems.size() || m_pItems.get(nItem) == null) {
 				return false;
+			}
 
 			MenuItem pItem = m_pItems.get(nItem);
 			return (pItem.flags & 1) != 0 && (pItem.flags & 2) != 0;
@@ -185,29 +179,33 @@ public abstract class BuildMenuList extends BuildMenu {
 		@Override
 		protected void ListEnd(MenuHandler handler, int len) {
 			super.ListEnd(handler, len);
-			if (!mCheckListItemsFlags(l_nFocus))
+			if (!mCheckListItemsFlags(l_nFocus)) {
 				ListUp(handler, len);
+			}
 		}
 
 		@Override
 		protected void ListHome(MenuHandler handler) {
 			super.ListHome(handler);
-			if (!mCheckListItemsFlags(l_nFocus))
+			if (!mCheckListItemsFlags(l_nFocus)) {
 				ListDown(handler, len);
+			}
 		}
 
 		@Override
 		protected void ListPGUp(MenuHandler handler) {
 			super.ListPGUp(handler);
-			if (!mCheckListItemsFlags(l_nFocus))
+			if (!mCheckListItemsFlags(l_nFocus)) {
 				ListDown(handler, len);
+			}
 		}
 
 		@Override
 		protected void ListPGDown(MenuHandler handler, int len) {
 			super.ListPGDown(handler, len);
-			if (!mCheckListItemsFlags(l_nFocus))
+			if (!mCheckListItemsFlags(l_nFocus)) {
 				ListUp(handler, len);
+			}
 		}
 	}
 
@@ -215,21 +213,25 @@ public abstract class BuildMenuList extends BuildMenu {
 	private final BuildGame app;
 
 	public BuildMenuList(BuildGame app, String title, int x, int y, int width, int step, int nShowElements) {
+		super(app.pMenu);
 		this.app = app;
+
 
 		super.addItem(getTitle(app, title), false);
 		super.addItem(list = new MenuItemList(x, y, width, step, nShowElements), true);
 	}
 
 	protected void addScroller(MenuScroller scroller) {
-		if (scroller != null)
+		if (scroller != null) {
 			super.addItem(scroller, false);
+		}
 	}
 
 	@Override
 	public int addItem(MenuItem pItem, boolean nFirstItem) {
-		if (pItem == null)
+		if (pItem == null) {
 			return -1;
+		}
 
 		return list.addItem(pItem, nFirstItem);
 	}
@@ -241,8 +243,9 @@ public abstract class BuildMenuList extends BuildMenu {
 	@Override
 	public boolean mGetFocusedItem(MenuItem m_pItem) {
 		if(!super.mGetFocusedItem(m_pItem)) {
-			if ( list.l_nFocus >= 0 && list.l_nFocus < list.m_pItems.size())
-			    return m_pItem == list.m_pItems.get(list.l_nFocus);
+			if ( list.l_nFocus >= 0 && list.l_nFocus < list.m_pItems.size()) {
+				return m_pItem == list.m_pItems.get(list.l_nFocus);
+			}
 		}
 		return false;
 	}
@@ -252,10 +255,11 @@ public abstract class BuildMenuList extends BuildMenu {
 		MenuItem pItem;
 		if (list.l_nFocus >= 0 && list.m_pItems.size() > 0
 				&& ((pItem = list.m_pItems.get(list.l_nFocus)).flags & 2) != 0) {
-			if (pItem instanceof MenuSlider || pItem instanceof MenuScroller) {
-				if (app.pInput.ctrlKeyPressed(MOUSE_LBUTTON))
-					opt = MenuOpt.LMB;
-			}
+//			if (pItem instanceof MenuSlider || pItem instanceof MenuScroller) {
+//				if (app.pInput.ctrlKeyPressed(MOUSE_LBUTTON)) {
+//					opt = MenuOpt.LMB;
+//				}
+//			}
 		}
 
 		if (list.l_OldMouseFocus != list.l_nFocus) {

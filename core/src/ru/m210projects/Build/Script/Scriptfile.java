@@ -9,6 +9,8 @@
 
 package ru.m210projects.Build.Script;
 
+import ru.m210projects.Build.filehandle.Entry;
+
 import static ru.m210projects.Build.Strhandler.toLowerCase;
 
 import java.io.File;
@@ -27,13 +29,15 @@ public class Scriptfile {
 	public int[] lineoffs;
 
 	protected void skipovertoken() {
-		while ((textptr < eof) && textptr < textbuf.length() && (textbuf.charAt(textptr)) != 0)
-			textptr++;
+		while ((textptr < eof) && textptr < textbuf.length() && (textbuf.charAt(textptr)) != 0) {
+            textptr++;
+        }
 	}
 
 	protected void skipoverws() {
-		if ((textptr < eof) && textptr < textbuf.length() && (textbuf.charAt(textptr)) == 0)
-			textptr++;
+		if ((textptr < eof) && textptr < textbuf.length() && (textbuf.charAt(textptr)) == 0) {
+            textptr++;
+        }
 	}
 
 	public String getstring() {
@@ -54,8 +58,9 @@ public class Scriptfile {
 		int start;
 
 		skipoverws();
-		if (textptr >= eof)
-			return -2;
+		if (textptr >= eof) {
+            return -2;
+        }
 		start = ltextptr = textptr;
 		skipovertoken();
 
@@ -64,8 +69,9 @@ public class Scriptfile {
 
 	public Double getdouble() {
 		int t = gettoken();
-		if (t == -2)
-			return null;
+		if (t == -2) {
+            return null;
+        }
 
 		try {
 			return Double.parseDouble(textbuf.substring(t, textptr));
@@ -76,8 +82,9 @@ public class Scriptfile {
 
 	public Integer getsymbol() {
 		int t = gettoken();
-		if (t == -2)
-			return null;
+		if (t == -2) {
+            return null;
+        }
 
 		try {
 			return (int) Long.parseLong(textbuf.substring(t, textptr), 10);
@@ -109,17 +116,21 @@ public class Scriptfile {
 		bracestart = ++textptr;
 		bracecnt = 1;
 		while (true) {
-			if (textptr >= eof)
-				return (0);
+			if (textptr >= eof) {
+                return (0);
+            }
 			
-			if (textbuf.charAt(textptr) == '\"') 
-				inquote ^= 1;
-			if (inquote == 0 && textbuf.charAt(textptr) == '{')
-				bracecnt++;
+			if (textbuf.charAt(textptr) == '\"') {
+                inquote ^= 1;
+            }
+			if (inquote == 0 && textbuf.charAt(textptr) == '{') {
+                bracecnt++;
+            }
 			if (inquote == 0 && textbuf.charAt(textptr) == '}') {
 				bracecnt--;
-				if (bracecnt == 0)
-					break;
+				if (bracecnt == 0) {
+                    break;
+                }
 			}
 			textptr++;
 		}
@@ -142,11 +153,14 @@ public class Scriptfile {
 	public int getlinum(int ptr) {
 		int i, stp;
 
-		for (stp = 1; stp + stp < linenum; stp += stp)
-			; // stp = highest power of 2 less than linenum
-		for (i = 0; stp != 0; stp >>= 1)
-			if ((i + stp < linenum) && (lineoffs[i + stp] < ptr))
-				i += stp;
+		for (stp = 1; stp + stp < linenum; stp += stp) {
+            ; // stp = highest power of 2 less than linenum
+        }
+		for (i = 0; stp != 0; stp >>= 1) {
+            if ((i + stp < linenum) && (lineoffs[i + stp] < ptr)) {
+                i += stp;
+            }
+        }
 		return i + 2; // i = index to highest lineoffs which is less than ind; convert to 1-based line
 						// numbers
 	}
@@ -191,8 +205,9 @@ public class Scriptfile {
 				// Remember line numbers by storing the byte index at the start of each line
 				// Line numbers can be retrieved by doing a binary search on the byte index :)
 				lineoffs[numcr++] = nflen;
-				if (cs == 1)
-					cs = 0;
+				if (cs == 1) {
+                    cs = 0;
+                }
 				space = 1;
 				continue; // strip CR/LF
 			}
@@ -201,10 +216,12 @@ public class Scriptfile {
 				space = 1;
 				continue;
 			} // strip Space/Tab
-			if ((data[i] == '/') && (data[i + 1] == '/') && (cs == 0))
-				cs = 1;
-			if ((data[i] == '\\') && (data[i + 1] == '\\') && (cs == 0))
-				cs = 1;
+			if ((data[i] == '/') && (data[i + 1] == '/') && (cs == 0)) {
+                cs = 1;
+            }
+			if ((data[i] == '\\') && (data[i + 1] == '\\') && (cs == 0)) {
+                cs = 1;
+            }
 			if ((data[i] == '/') && (data[i + 1] == '*') && (cs == 0)) {
 				space = 1;
 				cs = 2;
@@ -214,8 +231,9 @@ public class Scriptfile {
 				i++;
 				continue;
 			}
-			if (cs != 0)
-				continue;
+			if (cs != 0) {
+                continue;
+            }
 
 			if (space != 0) {
 				data[nflen++] = 0;
@@ -245,10 +263,8 @@ public class Scriptfile {
 		eof = textbuf.length() - 1;
 	}
 
-	public Scriptfile(String filename, byte[] data) {
-		if(data == null)
-			throw new RuntimeException("byte[] data == NULL");
-
+	public Scriptfile(String filename, Entry entry) {
+		byte[] data = entry.getBytes();
 		int flen = data.length;
 		byte[] tx = Arrays.copyOf(data, flen + 2);
 		tx[flen] = tx[flen + 1] = 0;

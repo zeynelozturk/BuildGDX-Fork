@@ -17,31 +17,34 @@
 package ru.m210projects.Build.Pattern.ScreenAdapters;
 
 import static ru.m210projects.Build.Gameutils.*;
-import static ru.m210projects.Build.Engine.*;
-import static ru.m210projects.Build.Net.Mmulti.*;
+import static ru.m210projects.Build.net.Mmulti.*;
 import static ru.m210projects.Build.Pattern.BuildNet.*;
-import static ru.m210projects.Build.Strhandler.toLowerCase;
 
 import com.badlogic.gdx.ScreenAdapter;
 
-import ru.m210projects.Build.Architecture.BuildGdx;
-import ru.m210projects.Build.Architecture.BuildFrame.FrameType;
-import ru.m210projects.Build.Architecture.BuildGraphics.Option;
-import ru.m210projects.Build.OnSceenDisplay.Console;
-import ru.m210projects.Build.Pattern.BuildEngine;
+import ru.m210projects.Build.Engine;
+import ru.m210projects.Build.Render.Renderer;
+import ru.m210projects.Build.Render.TextureHandle.TileData;
+import ru.m210projects.Build.settings.GameConfig;
+import ru.m210projects.Build.settings.GameKeys;
+import ru.m210projects.Build.filehandle.Entry;
+import ru.m210projects.Build.input.GameKey;
+import ru.m210projects.Build.input.InputListener;
+import ru.m210projects.Build.osd.Console;
 import ru.m210projects.Build.Pattern.BuildGame;
 import ru.m210projects.Build.Pattern.BuildNet;
 import ru.m210projects.Build.Pattern.BuildGame.NetMode;
 import ru.m210projects.Build.Pattern.MenuItems.MenuHandler;
-import ru.m210projects.Build.Settings.BuildConfig;
 
-public abstract class GameAdapter extends ScreenAdapter {
+import java.io.ByteArrayOutputStream;
+
+public abstract class GameAdapter extends ScreenAdapter implements InputListener {
 
 	protected BuildGame game;
 	protected BuildNet pNet;
 	protected MenuHandler pMenu;
-	protected BuildEngine pEngine;
-	protected BuildConfig pCfg;
+	protected Engine pEngine;
+	protected GameConfig pCfg;
 	protected Runnable gScreenCapture;
 	protected LoadingAdapter load;
 	public byte[] captBuffer;
@@ -86,7 +89,8 @@ public abstract class GameAdapter extends ScreenAdapter {
 		/* nothing */ }
 
 	public void PostFrame(BuildNet net) {
-		/* nothing */ }
+		/* nothing */
+	}
 
 	public abstract void ProcessFrame(BuildNet net);
 
@@ -97,39 +101,31 @@ public abstract class GameAdapter extends ScreenAdapter {
 
 	public abstract void DrawHud(float smooth);
 
-	public abstract void KeyHandler();
-
 	public abstract void sndHandlePause(boolean pause);
 
-	protected abstract boolean prepareboard(String map);
+	protected abstract boolean prepareboard(Entry entry);
 
 	public GameAdapter setTitle(String title) {
 		load.setTitle(title);
 		return this;
 	}
 
-	public GameAdapter loadboard(final String map, final Runnable prestart) {
+	public GameAdapter loadboard(final Entry mapEntry, final Runnable prestart) {
 		pNet.ready2send = false;
 		game.changeScreen(load);
-		load.init(new Runnable() {
-			@Override
-			public void run() {
-				if (prepareboard(map)) {
-					if (prestart != null)
-						prestart.run();
+		load.init(() -> {
+            if (prepareboard(mapEntry)) {
+                if (prestart != null) {
+                    prestart.run();
+                }
 
-					String mapname = map;
-					int index = toLowerCase(mapname).indexOf(".map");
-					if (index == -1)
-						mapname = mapname + ".map";
+                if (game.currentDef.mapInfo.load(mapEntry)) {
+                    System.err.println("Maphack loaded for map: " + mapEntry.getName());
+                }
 
-					if (game.currentDef.mapInfo.load(mapname))
-						System.err.println("Maphack loaded for map: " + mapname);
-
-					startboard(startboard);
-				} // do nothing, it's better to handle it in each game manualy
-			}
-		});
+                startboard(startboard);
+            } // do nothing, it's better to handle it in each game manualy;
+        });
 
 		return this;
 	}
@@ -138,62 +134,68 @@ public abstract class GameAdapter extends ScreenAdapter {
 		@Override
 		public void run() {
 			pNet.WaitForAllPlayers(0);
-			System.gc();
-
 			pNet.ResetTimers();
-			game.pInput.resetMousePos();
 			pNet.ready2send = true;
 			game.changeScreen(GameAdapter.this);
 
-			pEngine.faketimerhandler();
+//			pEngine.faketimerhandler();
 		}
 	};
 
 	protected void startboard(Runnable startboard) {
-		startboard.run();
+		game.doPrecache(startboard);
 	}
 
 	@Override
 	public void show() {
+		game.getProcessor().resetPollingStates();
 		pMenu.mClose();
+		pNet.ready2send = true;
+	}
+
+	@Override
+	public void hide() {
+		pNet.ready2send = false;
 	}
 
 	@Override
 	public synchronized void render(float delta) {
-		KeyHandler();
-
 		if (numplayers > 1) {
-			pEngine.faketimerhandler();
+			// pEngine.faketimerhandler();
 
 			pNet.GetPackets();
-			while (pNet.gPredictTail < pNet.gNetFifoHead[myconnectindex] && !game.gPaused)
+			while (pNet.gPredictTail < pNet.gNetFifoHead[myconnectindex] && !game.gPaused) {
 				pNet.UpdatePrediction(pNet.gFifoInput[pNet.gPredictTail & kFifoMask][myconnectindex]);
-		} else
+			}
+		} else {
 			pNet.bufferJitter = 0;
+		}
 
 		PreFrame(pNet);
 
 		int i;
 		while (pNet.gNetFifoHead[myconnectindex] - pNet.gNetFifoTail > pNet.bufferJitter && !game.gExit) {
-			for (i = connecthead; i >= 0; i = connectpoint2[i])
-				if (pNet.gNetFifoTail == pNet.gNetFifoHead[i])
+			for (i = connecthead; i >= 0; i = connectpoint2[i]) {
+				if (pNet.gNetFifoTail == pNet.gNetFifoHead[i]) {
 					break;
-			if (i >= 0)
-				break;
-
-			synchronized (GameAdapter.this) {
-				pEngine.faketimerhandler(); // game timer sync
-				ProcessFrame(pNet);
+				}
 			}
+			if (i >= 0) {
+				break;
+			}
+
+			pEngine.faketimerhandler(); // game timer sync
+			game.pInt.clearinterpolations();
+			ProcessFrame(pNet);
 		}
 
 		pNet.CheckSync();
 
 		float smoothratio = 65536;
-		if (!game.gPaused && (game.nNetMode != NetMode.Single || !pMenu.gShowMenu && !Console.IsShown())) {
-			smoothratio = pEngine.getsmoothratio();
+		if (!game.gPaused && (game.nNetMode != NetMode.Single || !pMenu.gShowMenu && !Console.out.isShowing())) {
+			smoothratio = pEngine.getTimer().getsmoothratio(delta);
 			if (smoothratio < 0 || smoothratio > 0x10000) {
-//				System.err.println("Interpolation error " + smoothratio);
+//					Console.out.println("Interpolation error " + smoothratio);
 				smoothratio = BClipRange(smoothratio, 0, 0x10000);
 			}
 		}
@@ -209,25 +211,21 @@ public abstract class GameAdapter extends ScreenAdapter {
 		DrawHud(smoothratio);
 		game.pInt.restoreinterpolations();
 
-		if (pMenu.gShowMenu)
+		if (pMenu.gShowMenu) {
 			pMenu.mDrawMenu();
+		}
 
 		PostFrame(pNet);
 
-		if (pCfg.gShowFPS)
-			pEngine.printfps(pCfg.gFpsScale);
-
-		pEngine.sampletimer();
-		pEngine.nextpage();
-		game.pInt.clearinterpolations();
+		pEngine.nextpage(delta);
 	}
 
 	public void capture(final int width, final int height) {
-		gScreenCapture = new Runnable() {
-			@Override
-			public void run() {
-				captBuffer = pEngine.getrender().screencapture(width, height);
-			}
+		Renderer renderer = game.getRenderer();
+		gScreenCapture = () -> {
+			ByteArrayOutputStream os = new ByteArrayOutputStream();
+			renderer.screencapture(os, width, height, TileData.PixelFormat.Pal8);
+			captBuffer = os.toByteArray();
 		};
 	}
 
@@ -239,23 +237,38 @@ public abstract class GameAdapter extends ScreenAdapter {
 	public void pause() {
 		if (game.nNetMode == NetMode.Single && numplayers < 2) {
 			game.gPaused = true;
-			sndHandlePause(game.gPaused);
+			sndHandlePause(true);
 		}
-
-		if (BuildGdx.graphics.getFrameType() == FrameType.GL)
-			BuildGdx.graphics.extra(Option.GLDefConfiguration);
 	}
 
 	@Override
 	public void resume() {
 		if (game.nNetMode == NetMode.Single && numplayers < 2) {
-			{
-				game.gPaused = false;
-				pNet.ototalclock = totalclock;
-			}
+			game.gPaused = false;
+			pNet.ototalclock = game.pEngine.getTotalClock();
 			sndHandlePause(game.gPaused);
 		}
-		game.updateColorCorrection();
 	}
 
+	@Override
+	public boolean gameKeyDown(GameKey gameKey) {
+		if (GameKeys.Show_Console.equals(gameKey)) {
+			Console.out.onToggle();
+			return true;
+		}
+		return false;
+	}
+
+	@Override
+	public InputListener getInputListener() {
+		if (Console.out.isShowing()) {
+			return Console.out;
+		}
+
+		if (game.pMenu.isShowing()) {
+			return game.pMenu;
+		}
+
+		return this;
+	}
 }

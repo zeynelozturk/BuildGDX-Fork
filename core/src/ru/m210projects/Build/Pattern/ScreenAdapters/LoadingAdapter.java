@@ -16,86 +16,87 @@
 
 package ru.m210projects.Build.Pattern.ScreenAdapters;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ScreenAdapter;
-
+import com.badlogic.gdx.controllers.Controller;
 import ru.m210projects.Build.Engine;
-import ru.m210projects.Build.Architecture.BuildGdx;
-import ru.m210projects.Build.Architecture.BuildFrame.FrameType;
-import ru.m210projects.Build.Architecture.BuildGraphics.Option;
 import ru.m210projects.Build.Pattern.BuildGame;
 import ru.m210projects.Build.Pattern.BuildNet;
 import ru.m210projects.Build.Pattern.MenuItems.MenuHandler;
+import ru.m210projects.Build.input.GameKey;
+import ru.m210projects.Build.input.InputListener;
 
-public abstract class LoadingAdapter extends ScreenAdapter {
+public abstract class LoadingAdapter extends ScreenAdapter implements InputListener {
+    // implement GameKeyListener to override key inputs
+    public BuildNet net;
+    public Engine engine;
+    protected Runnable toLoad;
+    protected int frames;
+    protected BuildGame game;
+    protected MenuHandler menu;
+    private String title;
 
-	protected Runnable toLoad;
-	protected int frames;
-	private String title;
-	
-	public BuildNet net;
-	public Engine engine;
-	protected BuildGame game;
-	protected MenuHandler menu;
-	
-	public LoadingAdapter(BuildGame game)
-	{
-		this.game = game;
-		this.engine = game.pEngine;
-		this.net = game.pNet;
-		this.menu = game.pMenu;
-	}
-	
-	@Override
-	public void show()
-	{
-		net.ready2send = false;
-		frames = 0;
-	}
-	
-	@Override
-	public void hide () {
-		title = null;
-	}
-	
-	public ScreenAdapter init(Runnable toLoad)
-	{
-		this.toLoad = toLoad;
-		return this;
-	}
-	
-	public ScreenAdapter setTitle(String title)
-	{
-		this.title = title;
-		return this;
-	}
-	
-	protected abstract void draw(String title, float delta);
-	
-	@Override
-	public void render(float delta) {
-		engine.clearview(0);
-		
-		draw(title, delta);
+    public LoadingAdapter(BuildGame game) {
+        this.game = game;
+        this.engine = game.pEngine;
+        this.net = game.pNet;
+        this.menu = game.pMenu;
+    }
 
-		if(toLoad != null && frames > 10)
-		{
-			BuildGdx.app.postRunnable(toLoad);
-			toLoad = null;
-		}
-		
-		engine.sampletimer();
-		engine.nextpage();
-		frames++;
-	}	
-	
-	@Override
-	public void pause () {
-		if (BuildGdx.graphics.getFrameType() == FrameType.GL) 
-			BuildGdx.graphics.extra(Option.GLDefConfiguration);
-	}
+    @Override
+    public void show() {
+        game.getProcessor().resetPollingStates();
+        net.ready2send = false;
+        frames = 0;
+    }
 
-	@Override
-	public void resume () {
-		game.updateColorCorrection();
-	}
+    @Override
+    public void hide() {
+        title = null;
+    }
+
+    public ScreenAdapter init(Runnable toLoad) {
+        this.toLoad = toLoad;
+        return this;
+    }
+
+    public ScreenAdapter setTitle(String title) {
+        this.title = title;
+        return this;
+    }
+
+    protected abstract void draw(String title, float delta);
+
+    @Override
+    public void render(float delta) {
+        game.getRenderer().clearview(0);
+
+        draw(title, delta);
+
+        if (toLoad != null && frames > 10) {
+            final Runnable runnable = toLoad;
+            Gdx.app.postRunnable(() -> {
+                try {
+                    runnable.run();
+                } catch (Exception e) {
+                    game.softExceptionScreen(e);
+                }
+            });
+            toLoad = null;
+        }
+
+        if (toLoad == null && frames > 100) {
+            game.show();
+            return;
+        }
+
+        engine.nextpage(delta);
+        frames++;
+    }
+
+    @Override
+    public InputListener getInputListener() {
+        // lock all inputs
+        return null;
+    }
 }

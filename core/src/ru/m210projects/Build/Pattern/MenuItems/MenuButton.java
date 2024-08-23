@@ -16,9 +16,11 @@
 
 package ru.m210projects.Build.Pattern.MenuItems;
 
-import ru.m210projects.Build.Pattern.BuildFont;
-import ru.m210projects.Build.Pattern.BuildFont.TextAlign;
 import ru.m210projects.Build.Pattern.MenuItems.MenuHandler.MenuOpt;
+import ru.m210projects.Build.Types.ConvertType;
+import ru.m210projects.Build.Types.Transparent;
+import ru.m210projects.Build.Types.font.Font;
+import ru.m210projects.Build.Types.font.TextAlign;
 
 public class MenuButton extends MenuItem
 {
@@ -28,7 +30,7 @@ public class MenuButton extends MenuItem
 	public MenuProc specialCall;
 	public int specialOpt;
 
-	public MenuButton(Object text, BuildFont font, int x, int y, int width, int align, int pal, BuildMenu nextMenu, int nItem, MenuProc specialCall, int specialOpt) {
+	public MenuButton(Object text, Font font, int x, int y, int width, int align, int pal, BuildMenu nextMenu, int nItem, MenuProc specialCall, int specialOpt) {
 		super(text, font);
 		
 		this.flags = 3 | 4;
@@ -53,12 +55,14 @@ public class MenuButton extends MenuItem
 		    int px = x;
 		    int pal = handler.getPal(font, this);
 		    
-		    if(align == 1) 
-		        px = width / 2 + x - font.getWidth(text) / 2;
-		    if(align == 2) 
-		        px = x + width - 1 - font.getWidth(text);
+		    if(align == 1) {
+				px = width / 2 + x - font.getWidth(text, 1.0f) / 2;
+			}
+		    if(align == 2) {
+				px = x + width - 1 - font.getWidth(text, 1.0f);
+			}
 
-		    font.drawText(px, y, text, shade, pal, TextAlign.Left, 2, fontShadow);
+		    font.drawTextScaled(handler.getRenderer(), px, y, text, 1.0f, shade, pal, TextAlign.Left, Transparent.None, ConvertType.Normal, fontShadow);
 		}
 		
 		handler.mPostDraw(this);
@@ -68,10 +72,12 @@ public class MenuButton extends MenuItem
 	public boolean callback(MenuHandler handler, MenuOpt opt) {
 		if ( (flags & 4) != 0 && (opt == MenuOpt.ENTER || opt == MenuOpt.LMB) )
 		{
-			if ( specialCall != null )
+			if ( specialCall != null ) {
 				specialCall.run(handler, this);
-		    if ( nextMenu != null )
-		    	handler.mOpen(nextMenu, nItem);
+			}
+		    if ( nextMenu != null ) {
+				handler.mOpen(nextMenu, nItem);
+			}
 		}
 		else {
 			return m_pMenu.mNavigation(opt);
@@ -93,16 +99,19 @@ public class MenuButton extends MenuItem
 	public boolean mouseAction(int mx, int my) {
 		if(text != null)
 		{
-			int wd = font.getWidth(text);
+			int wd = font.getWidth(text, 1.0f);
 			int px = x;
-			if(align == 1) 
-		        px = width / 2 + x - wd / 2;
+			if(align == 1) {
+				px = width / 2 + x - wd / 2;
+			}
 		    
-			if(align == 2) 
+			if(align == 2) {
 				px = x + width - 1 - wd;
+			}
 
-			if(mx > px && mx < px + wd)
-                return my > y && my < y + font.getHeight();
+			if(mx > px && mx < px + wd) {
+				return my > y && my < y + font.getSize();
+			}
 		}
 		return false;
 	}

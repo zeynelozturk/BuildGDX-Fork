@@ -88,8 +88,9 @@ public class MD4 {
 			context[2] = 0x98BADCFE;
 			context[3] = 0x10325476;
 			count = 0L;
-			for (int i = 0; i < BLOCK_LENGTH; i++)
+			for (int i = 0; i < BLOCK_LENGTH; i++) {
 				buffer[i] = 0;
+			}
 		}
 
 		/**
@@ -101,8 +102,9 @@ public class MD4 {
 			int i = (int) (count % BLOCK_LENGTH);
 			count++; // update number of bytes
 			buffer[i] = b;
-			if (i == BLOCK_LENGTH - 1)
+			if (i == BLOCK_LENGTH - 1) {
 				transform(buffer, 0);
+			}
 		}
 
 		/**
@@ -120,8 +122,9 @@ public class MD4 {
 		@Override
 		public void engineUpdate(byte[] input, int offset, int len) {
 			// make sure we don't exceed input's allocated size/length
-			if (offset < 0 || len < 0 || (long) offset + len > input.length)
+			if (offset < 0 || len < 0 || (long) offset + len > input.length) {
 				throw new ArrayIndexOutOfBoundsException();
+			}
 
 			// compute number of bytes still unhashed; ie. present in buffer
 			int bufferNdx = (int) (count % BLOCK_LENGTH);
@@ -133,13 +136,15 @@ public class MD4 {
 
 				transform(buffer, 0);
 
-				for (i = partLen; i + BLOCK_LENGTH - 1 < len; i += BLOCK_LENGTH)
+				for (i = partLen; i + BLOCK_LENGTH - 1 < len; i += BLOCK_LENGTH) {
 					transform(input, offset + i);
+				}
 				bufferNdx = 0;
 			}
 			// buffer remaining input
-			if (i < len)
+			if (i < len) {
 				System.arraycopy(input, offset + i, buffer, bufferNdx, len - i);
+			}
 		}
 
 		/**
@@ -161,16 +166,19 @@ public class MD4 {
 			// append length before final transform:
 			// save number of bits, casting the long to an array of 8 bytes
 			// save low-order byte first.
-			for (int i = 0; i < 8; i++)
+			for (int i = 0; i < 8; i++) {
 				tail[padLen + i] = (byte) ((count * 8) >>> (8 * i));
+			}
 
 			engineUpdate(tail, 0, tail.length);
 
 			byte[] result = new byte[16];
 			// cast this MD4's context (array of 4 ints) into an array of 16 bytes.
-			for (int i = 0; i < 4; i++)
-				for (int j = 0; j < 4; j++)
+			for (int i = 0; i < 4; i++) {
+				for (int j = 0; j < 4; j++) {
 					result[i * 4 + j] = (byte) (context[i] >>> (8 * j));
+				}
+			}
 
 			// reset the engine
 			engineReset();
@@ -193,9 +201,10 @@ public class MD4 {
 
 			// encodes 64 bytes from input block into an array of 16 32-bit
 			// entities. Use A as a temp var.
-			for (int i = 0; i < 16; i++)
+			for (int i = 0; i < 16; i++) {
 				X[i] = (block[offset++] & 0xFF) | (block[offset++] & 0xFF) << 8 | (block[offset++] & 0xFF) << 16
 						| (block[offset++] & 0xFF) << 24;
+			}
 
 			int A = context[0];
 			int B = context[1];
@@ -282,8 +291,9 @@ public class MD4 {
 		byte[] b = MD4.digest();
 
 		StringBuilder result = new StringBuilder();
-		for (byte value : b)
+		for (byte value : b) {
 			result.append(Integer.toString((value & 0xff) + 0x100, 16).substring(1).toUpperCase());
+		}
 
 		return result.toString();
 	}

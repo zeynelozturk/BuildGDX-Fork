@@ -1,5 +1,22 @@
+// This file is part of BuildGDX.
+// Copyright (C) 2023-2024 Alexander Makarov-[M210] (m210-2007@mail.ru)
+//
+// BuildGDX is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// BuildGDX is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with BuildGDX.  If not, see <http://www.gnu.org/licenses/>.
+
 package ru.m210projects.Build.Render.ModelHandle.MDModel.MD3;
 
+import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 
@@ -17,7 +34,7 @@ public abstract class MD3ModelGL20 extends MDModel {
 	private final MD3Surface[] surfaces;
 	private final int numSurfaces;
 
-	public MD3ModelGL20(MD3Info md) {
+	public MD3ModelGL20(MD3Info md) throws IOException {
 		super(md);
 
 		MD3Builder builder = new MD3Builder(md);
@@ -69,15 +86,18 @@ public abstract class MD3ModelGL20 extends MDModel {
 				vertices.flip();
 
 				indices.clear();
-				for (int i = s.numtris - 1; i >= 0; i--)
-					for (int j = 0; j < 3; j++)
+				for (int i = s.numtris - 1; i >= 0; i--) {
+					for (int j = 0; j < 3; j++) {
 						indices.put((short) s.tris[i][j]);
+					}
+				}
 				indices.flip();
 
 				mesh.render(getShader(), GL20.GL_TRIANGLES);
 				isRendered = true;
-			} else
+			} else {
 				break;
+			}
 		}
 
 		return isRendered;
@@ -85,8 +105,9 @@ public abstract class MD3ModelGL20 extends MDModel {
 
 	@Override
 	public void loadSkins(int pal, int skinnum) {
-		for (int surfi = 0; surfi < numSurfaces; surfi++)
+		for (int surfi = 0; surfi < numSurfaces; surfi++) {
 			getSkin(pal, skinnum, surfi);
+		}
 	}
 
 	@Override

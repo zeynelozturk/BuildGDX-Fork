@@ -1,27 +1,24 @@
-// This file is part of BuildGDX.
+// This file is part of Gdx.
 // Copyright (C) 2017-2021  Alexander Makarov-[M210] (m210-2007@mail.ru)
 //
-// BuildGDX is free software: you can redistribute it and/or modify
+// Gdx is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// BuildGDX is distributed in the hope that it will be useful,
+// Gdx is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with BuildGDX.  If not, see <http://www.gnu.org/licenses/>.
+// along with Gdx.  If not, see <http://www.gnu.org/licenses/>.
 
 package ru.m210projects.Build.Render.TextureHandle;
 
-import static ru.m210projects.Build.Engine.*;
-
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
-
-import ru.m210projects.Build.Architecture.BuildGdx;
 
 public abstract class IndexedShader extends ShaderProgram {
 
@@ -106,21 +103,24 @@ public abstract class IndexedShader extends ShaderProgram {
 	protected int lastPal, lastShade, lastVisibility;
 	protected float lastAlpha;
 	protected boolean drawLastIndex;
+	protected int numshades;
 
-	public IndexedShader() throws Exception {
+	public IndexedShader(int numshades) throws Exception {
 		super(defaultVertex, defaultFragment);
-		init();
+		init(numshades);
 	}
 
-	public IndexedShader(String vertexShader, String fragmentShader) throws Exception {
+	public IndexedShader(String vertexShader, String fragmentShader, int numshades) throws Exception {
 		super(vertexShader, fragmentShader);
-		init();
+		init(numshades);
 	}
 
-	protected void init() throws Exception {
-		if (!isCompiled())
+	protected void init(int numshades) throws Exception {
+		if (!isCompiled()) {
 			throw new Exception("Shader compile error: " + getLog());
+		}
 
+		this.numshades = numshades;
 		this.paletteloc = getUniformLocation("u_palette");
 		this.numshadesloc = getUniformLocation("u_numshades");
 		this.visibilityloc = getUniformLocation("u_visibility");
@@ -147,14 +147,13 @@ public abstract class IndexedShader extends ShaderProgram {
 	public abstract void bindPalookup(int unit, int pal);
 
 	@Override
-	public void begin() {
-		super.begin();
+	public void bind() {
+		super.bind();
 		isBinded = true;
 	}
 
-	@Override
-	public void end() {
-		super.end();
+	public void unbind() {
+		Gdx.gl20.glUseProgram(0);
 		isBinded = false;
 	}
 
@@ -181,7 +180,7 @@ public abstract class IndexedShader extends ShaderProgram {
 
 		setUniformi(shadeloc, shade);
 		this.lastShade = shade;
-		BuildGdx.gl.glActiveTexture(GL20.GL_TEXTURE0);
+		Gdx.gl.glActiveTexture(GL20.GL_TEXTURE0);
 	}
 
 	public void setTransparent(float alpha) {

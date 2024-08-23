@@ -33,16 +33,20 @@ public class ThreadProcessor {
 	
 	public boolean isBusy()
 	{
-		for(Thread t : list) 
-			if(t.isAlive())
+		for(Thread t : list) {
+			if(t.isAlive()) {
 				return true;
+			}
+		}
 
 		return false;
 	}
 	
 	public void await()
 	{
-		while(isBusy());
+		while(isBusy()) {
+			;
+		}
 		
 		list.clear();
 	}

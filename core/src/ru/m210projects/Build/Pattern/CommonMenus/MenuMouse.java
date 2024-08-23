@@ -16,9 +16,7 @@
 
 package ru.m210projects.Build.Pattern.CommonMenus;
 
-import static ru.m210projects.Build.Settings.BuildConfig.*;
-
-import ru.m210projects.Build.Pattern.BuildFont;
+import ru.m210projects.Build.Gameutils;
 import ru.m210projects.Build.Pattern.BuildGame;
 import ru.m210projects.Build.Pattern.MenuItems.BuildMenu;
 import ru.m210projects.Build.Pattern.MenuItems.MenuButton;
@@ -30,7 +28,10 @@ import ru.m210projects.Build.Pattern.MenuItems.MenuSlider;
 import ru.m210projects.Build.Pattern.MenuItems.MenuSwitch;
 import ru.m210projects.Build.Pattern.MenuItems.MenuTitle;
 import ru.m210projects.Build.Pattern.MenuItems.MenuHandler.MenuOpt;
-import ru.m210projects.Build.Settings.BuildConfig;
+import ru.m210projects.Build.settings.MouseAxis;
+import ru.m210projects.Build.settings.GameConfig;
+import ru.m210projects.Build.Types.font.Font;
+import ru.m210projects.Build.input.GameKey;
 
 public abstract class MenuMouse extends BuildMenu {
 	
@@ -38,6 +39,7 @@ public abstract class MenuMouse extends BuildMenu {
 	
 	public MenuSwitch mEnable;
 	public MenuSwitch mMenuEnab;
+	public MenuSwitch mRawInput;
 	public MenuSlider mSens;
 	public MenuSlider mTurn;
 	public MenuSlider mLook;
@@ -54,84 +56,94 @@ public abstract class MenuMouse extends BuildMenu {
 
 	public abstract MenuTitle getTitle(BuildGame app, String text);
 
-	public MenuMouse(final BuildGame app, int posx, int posy, int width, int menuHeight, int separatorHeight, BuildFont style, int buttonPal)
+	public MenuMouse(final BuildGame app, int posx, int posy, int width, int menuHeight, int separatorHeight, Font style, int buttonPal)
 	{
+		super(app.pMenu);
 		addItem(getTitle(app, "Mouse setup"), false);
 		
-		final BuildConfig cfg = app.pCfg;
+		final GameConfig cfg = app.pCfg;
 		
 		advancedMenu = buildAdvancedAxisMenu(app, posx, posy, width, menuHeight, style);
 		
-		mEnable = new MenuSwitch("Mouse in game", style, posx, posy += menuHeight, width, cfg.useMouse, new MenuProc() {
+		mEnable = new MenuSwitch("Mouse in game", style, posx, posy += menuHeight, width, cfg.isUseMouse(), new MenuProc() {
 			@Override
 			public void run(MenuHandler handler, MenuItem pItem) {
 				MenuSwitch sw = (MenuSwitch) pItem;
-				cfg.useMouse = sw.value;
+				cfg.setUseMouse(sw.value);
 			}
 		}, "Yes", "No");
 		mEnable.pal = buttonPal;
 
-		mMenuEnab = new MenuSwitch("Mouse in menu", style, posx, posy += menuHeight, width, cfg.menuMouse,
+		mMenuEnab = new MenuSwitch("Mouse in menu", style, posx, posy += menuHeight, width, cfg.isMenuMouse(),
 				new MenuProc() {
 					@Override
 					public void run(MenuHandler handler, MenuItem pItem) {
 						MenuSwitch sw = (MenuSwitch) pItem;
-						cfg.menuMouse = sw.value;
+						cfg.setMenuMouse(sw.value);
 					}
 				}, "Yes", "No");
 		mMenuEnab.pal = buttonPal;
+
+		mRawInput = new MenuSwitch("Raw Mouse Input", style, posx, posy += menuHeight, width, cfg.isRawInput(), (handler, pItem) -> {
+            MenuSwitch sw = (MenuSwitch) pItem;
+            cfg.setRawInput(sw.value);
+        }, "Yes", "No") {
+			@Override
+			public void draw(MenuHandler handler) {
+				super.draw(handler);
+				this.mCheckEnableItem(cfg.isRawInputSupported());
+			}
+		};
+		mRawInput.pal = buttonPal;
 		
 		posy += separatorHeight;
-		mSens = new MenuSlider(app.pSlider, "Mouse Sensitivity", style, posx, posy += menuHeight, width, cfg.gSensitivity, 0x1000,
+		mSens = new MenuSlider(app.pSlider, "Mouse Sensitivity", style, posx, posy += menuHeight, width, cfg.getSensitivity(), 0x1000,
 				0x28000, 4096, new MenuProc() {
 					@Override
 					public void run(MenuHandler handler, MenuItem pItem) {
 						MenuSlider slider = (MenuSlider) pItem;
-						cfg.gSensitivity = slider.value;
+						cfg.setgSensitivity(slider.value);
 					}
 				}, true);
 		mSens.digitalMax = 65536f;
 		mSens.pal = buttonPal;
 
-		mTurn = new MenuSlider(app.pSlider, "Turning speed", style, posx, posy += menuHeight, width, cfg.gMouseTurnSpeed, 0,
-				0x28000, 4096, new MenuProc() {
-					@Override
-					public void run(MenuHandler handler, MenuItem pItem) {
-						MenuSlider slider = (MenuSlider) pItem;
-						cfg.gMouseTurnSpeed = slider.value;
-					}
-				}, true);
+		mTurn = new MenuSlider(app.pSlider, "Turning speed", style, posx, posy += menuHeight, width, cfg.getgMouseTurnSpeed(), 0,
+				0x28000, 4096, (handler, pItem) -> {
+                    MenuSlider slider = (MenuSlider) pItem;
+                    cfg.setgMouseTurnSpeed(slider.value);
+                }, true);
 		mTurn.digitalMax = 65536f;
 		mTurn.pal = buttonPal;
 
-		mLook = new MenuSlider(app.pSlider, "Aiming up/down speed", style, posx, posy += menuHeight, width, cfg.gMouseLookSpeed, 0,
+		mLook = new MenuSlider(app.pSlider, "Aiming up/down speed", style, posx, posy += menuHeight, width, cfg.getgMouseLookSpeed(), 0,
 				0x28000, 4096, new MenuProc() {
 					@Override
 					public void run(MenuHandler handler, MenuItem pItem) {
 						MenuSlider slider = (MenuSlider) pItem;
-						cfg.gMouseLookSpeed = slider.value;
+						cfg.setgMouseLookSpeed(slider.value);
 					}
 		}, true);
 		mLook.digitalMax = 65536f;
 		mLook.pal = buttonPal;
 
-		mMove = new MenuSlider(app.pSlider, "Forward/Backward speed", style, posx, posy += menuHeight, width, cfg.gMouseMoveSpeed,
+		mMove = new MenuSlider(app.pSlider, "Forward/Backward speed", style, posx, posy += menuHeight, width, cfg.getgMouseMoveSpeed(),
 				0, 0x28000, 4096, new MenuProc() {
 					@Override
 					public void run(MenuHandler handler, MenuItem pItem) {
 						MenuSlider slider = (MenuSlider) pItem;
-						cfg.gMouseMoveSpeed = slider.value;
+						cfg.setgMouseMoveSpeed(slider.value);
 					}
 		}, true);
 		mMove.digitalMax = 65536f;
 		mMove.pal = buttonPal;
 
-		mStrafe = new MenuSlider(app.pSlider, "Strafing speed", style, posx, posy += menuHeight, width, cfg.gMouseStrafeSpeed, 0,
+		mStrafe = new MenuSlider(app.pSlider, "Strafing speed", style, posx, posy += menuHeight, width, cfg.getgMouseStrafeSpeed(), 0,
 				0x28000, 4096, new MenuProc() {
 					@Override
 					public void run(MenuHandler handler, MenuItem pItem) {
 						MenuSlider slider = (MenuSlider) pItem;
-						cfg.gMouseStrafeSpeed = slider.value;
+						cfg.setgMouseStrafeSpeed(slider.value);
 					}
 		}, true);
 		mStrafe.digitalMax = 65536f;
@@ -139,21 +151,21 @@ public abstract class MenuMouse extends BuildMenu {
 
 		posy += separatorHeight;
 
-		mAiming = new MenuSwitch("Mouse aiming", style, posx, posy += menuHeight, width, cfg.gMouseAim, new MenuProc() {
+		mAiming = new MenuSwitch("Mouse aiming", style, posx, posy += menuHeight, width, cfg.isgMouseAim(), new MenuProc() {
 			@Override
 			public void run(MenuHandler handler, MenuItem pItem) {
 				MenuSwitch sw = (MenuSwitch) pItem;
-				cfg.gMouseAim = sw.value;
+				cfg.setgMouseAim(sw.value);
 			}
 		}, null, null);
 		mAiming.pal = buttonPal;
 		
-		mInvert = new MenuSwitch("Invert mouse aim", style, posx, posy += menuHeight, width, cfg.gInvertmouse,
+		mInvert = new MenuSwitch("Invert mouse aim", style, posx, posy += menuHeight, width, cfg.isgInvertmouse(),
 				new MenuProc() {
 					@Override
 					public void run(MenuHandler handler, MenuItem pItem) {
 						MenuSwitch sw = (MenuSwitch) pItem;
-						cfg.gInvertmouse = sw.value;
+						cfg.setgInvertmouse(sw.value);
 					}
 				}, null, null);
 		mInvert.pal = buttonPal;
@@ -164,6 +176,7 @@ public abstract class MenuMouse extends BuildMenu {
 		
 		addItem(mEnable, true);
 		addItem(mMenuEnab, false);
+		addItem(mRawInput, false);
 		addItem(mSens, false);
 
 		addItem(mTurn, false);
@@ -176,62 +189,64 @@ public abstract class MenuMouse extends BuildMenu {
 		addItem(mAdvance, false);
 	}
 	
-	protected BuildMenu buildAdvancedAxisMenu(BuildGame app, int posx, int posy, int width, int menuHeight, BuildFont style) {
-		BuildMenu advancedMenu = new BuildMenu();
+	protected BuildMenu buildAdvancedAxisMenu(BuildGame app, int posx, int posy, int width, int menuHeight, Font style) {
+		BuildMenu advancedMenu = new BuildMenu(app.pMenu);
 		
 		advancedMenu.addItem(getTitle(app, "Digital axis"), false);
-		final BuildConfig cfg = app.pCfg;
+		final GameConfig cfg = app.pCfg;
 
-		char[][] keymaplist = new char[cfg.keymap.length + 1][];
+		GameKey[] gameKeys = cfg.getKeymap();
+		char[][] keymaplist = new char[gameKeys.length + 1][];
 		keymaplist[0] = "None".toCharArray();
-		for (int i = 1; i < keymaplist.length; i++)
-			keymaplist[i] = cfg.keymap[i - 1].getName().toCharArray();
+		for (int i = 1; i < keymaplist.length; i++) {
+			keymaplist[i] = gameKeys[i - 1].getName().toCharArray();
+		}
 
 		mAxisUp = new MenuConteiner("Digital up", style, posx, posy += 10, width, null, 0, null) {
 			@Override
 			public void open() {
-				num = cfg.mouseaxis[AXISUP] + 1;
+				num = Gameutils.arrayIndexOf(gameKeys, i -> gameKeys[i].equals(cfg.getMouseAxis(MouseAxis.UP))) + 1;
 			}
 			
 			@Override
 			public boolean callback(MenuHandler handler, MenuOpt opt) {
-				return mAdvancedCallback(handler, cfg, this, opt, AXISUP);
+				return mAdvancedCallback(handler, cfg, this, opt, MouseAxis.UP);
 			}
 		};
 		
 		mAxisDown = new MenuConteiner("Digital down", style, posx, posy += 10, width, null, 0, null) {
 			@Override
 			public void open() {
-				num = cfg.mouseaxis[AXISDOWN] + 1;
+				num = Gameutils.arrayIndexOf(gameKeys, i -> gameKeys[i].equals(cfg.getMouseAxis(MouseAxis.DOWN))) + 1;
 			}
 			
 			@Override
 			public boolean callback(MenuHandler handler, MenuOpt opt) {
-				return mAdvancedCallback(handler, cfg, this, opt, AXISDOWN);
+				return mAdvancedCallback(handler, cfg, this, opt, MouseAxis.DOWN);
 			}
 		};
 		
 		mAxisLeft = new MenuConteiner("Digital left", style, posx, posy += 10, width, null, 0, null) {
 			@Override
 			public void open() {
-				num = cfg.mouseaxis[AXISLEFT] + 1;
+				num = Gameutils.arrayIndexOf(gameKeys, i -> gameKeys[i].equals(cfg.getMouseAxis(MouseAxis.LEFT))) + 1;
 			}
 			
 			@Override
 			public boolean callback(MenuHandler handler, MenuOpt opt) {
-				return mAdvancedCallback(handler, cfg, this, opt, AXISLEFT);
+				return mAdvancedCallback(handler, cfg, this, opt, MouseAxis.LEFT);
 			}
 		};
 		
 		mAxisRight = new MenuConteiner("Digital right", style, posx, posy += 10, width, null, 0, null) {
 			@Override
 			public void open() {
-				num = cfg.mouseaxis[AXISRIGHT] + 1;
+				num = Gameutils.arrayIndexOf(gameKeys, i -> gameKeys[i].equals(cfg.getMouseAxis(MouseAxis.RIGHT))) + 1;
 			}
 			
 			@Override
 			public boolean callback(MenuHandler handler, MenuOpt opt) {
-				return mAdvancedCallback(handler, cfg, this, opt, AXISRIGHT);
+				return mAdvancedCallback(handler, cfg, this, opt, MouseAxis.RIGHT);
 			}
 		};
 		
@@ -245,30 +260,45 @@ public abstract class MenuMouse extends BuildMenu {
 		return advancedMenu;
 	}
 	
-	private boolean mAdvancedCallback(MenuHandler handler, BuildConfig cfg, MenuConteiner item, MenuOpt opt, int nAxis) {
+	private boolean mAdvancedCallback(MenuHandler handler, GameConfig cfg, MenuConteiner item, MenuOpt opt, MouseAxis mouseAxis) {
 		switch(opt)
 		{
 		case LEFT:
 		case MWDW:
-			if ( (item.flags & 4) == 0 ) return false;
-			if(item.num > 0) item.num--;
-			else item.num = 0;
-			cfg.mouseaxis[nAxis] = item.num - 1;
+			if ( (item.flags & 4) == 0 ) {
+				return false;
+			}
+			if(item.num > 0) {
+				item.num--;
+			} else {
+				item.num = 0;
+			}
+
+			cfg.setMouseAxis(mouseAxis, item.num > 0 ? cfg.getKeymap()[item.num - 1] : GameKey.UNKNOWN_KEY);
 			return false;
 		case RIGHT:
 		case MWUP:
-			if ( (item.flags & 4) == 0 ) return false;
-			if(item.num < item.list.length - 1) item.num++;
-			else item.num = item.list.length - 1;
-			cfg.mouseaxis[nAxis] = item.num - 1;
+			if ( (item.flags & 4) == 0 ) {
+				return false;
+			}
+			if(item.num < item.list.length - 1) {
+				item.num++;
+			} else {
+				item.num = item.list.length - 1;
+			}
+			cfg.setMouseAxis(mouseAxis, item.num > 0 ? cfg.getKeymap()[item.num - 1] : GameKey.UNKNOWN_KEY);
 			return false;
 		case ENTER:
 		case LMB:
-			if ( (item.flags & 4) == 0 ) return false;
+			if ( (item.flags & 4) == 0 ) {
+				return false;
+			}
 			if(item.num < item.list.length - 1) {
 				item.num++;
-			} else item.num = 0;
-			cfg.mouseaxis[nAxis] = item.num - 1;
+			} else {
+				item.num = 0;
+			}
+			cfg.setMouseAxis(mouseAxis, item.num > 0 ? cfg.getKeymap()[item.num - 1] : GameKey.UNKNOWN_KEY);
 			return false;
 		default:
 			return item.m_pMenu.mNavigation(opt);

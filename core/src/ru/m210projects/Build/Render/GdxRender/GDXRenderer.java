@@ -16,94 +16,63 @@
 
 package ru.m210projects.Build.Render.GdxRender;
 
-import static com.badlogic.gdx.graphics.GL20.GL_BACK;
-import static com.badlogic.gdx.graphics.GL20.GL_BLEND;
-import static com.badlogic.gdx.graphics.GL20.GL_COLOR_BUFFER_BIT;
-import static com.badlogic.gdx.graphics.GL20.GL_CULL_FACE;
-import static com.badlogic.gdx.graphics.GL20.GL_CW;
-import static com.badlogic.gdx.graphics.GL20.GL_DEPTH_BUFFER_BIT;
-import static com.badlogic.gdx.graphics.GL20.GL_DEPTH_TEST;
-import static com.badlogic.gdx.graphics.GL20.GL_FRONT;
-import static com.badlogic.gdx.graphics.GL20.GL_LESS;
-import static com.badlogic.gdx.graphics.GL20.GL_ONE_MINUS_SRC_ALPHA;
-import static com.badlogic.gdx.graphics.GL20.GL_PACK_ALIGNMENT;
-import static com.badlogic.gdx.graphics.GL20.GL_RGB;
-import static com.badlogic.gdx.graphics.GL20.GL_RGBA;
-import static com.badlogic.gdx.graphics.GL20.GL_SRC_ALPHA;
-import static com.badlogic.gdx.graphics.GL20.GL_TEXTURE_2D;
-import static com.badlogic.gdx.graphics.GL20.GL_UNSIGNED_BYTE;
-import static com.badlogic.gdx.graphics.GL20.GL_VERSION;
-import static java.lang.Math.max;
-import static java.lang.Math.min;
-import static ru.m210projects.Build.Engine.*;
-import static ru.m210projects.Build.OnSceenDisplay.Console.OSDTEXT_GOLD;
-import static ru.m210projects.Build.Pragmas.divscale;
-import static ru.m210projects.Build.Pragmas.dmulscale;
-import static ru.m210projects.Build.Pragmas.mulscale;
-import static ru.m210projects.Build.Render.ModelHandle.MDModel.MDAnimation.mdpause;
-import static ru.m210projects.Build.Render.ModelHandle.MDModel.MDAnimation.mdtims;
-import static ru.m210projects.Build.Render.ModelHandle.MDModel.MDAnimation.omdtims;
-
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Application.ApplicationType;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Mesh;
+import com.badlogic.gdx.graphics.VertexAttribute;
+import com.badlogic.gdx.graphics.VertexAttributes;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.math.Matrix3;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Plane;
-import com.badlogic.gdx.utils.BufferUtils;
-
+import ru.m210projects.Build.Board;
 import ru.m210projects.Build.Engine;
 import ru.m210projects.Build.Gameutils;
-import ru.m210projects.Build.Architecture.BuildApplication.Platform;
-import ru.m210projects.Build.Architecture.BuildFrame.FrameType;
-import ru.m210projects.Build.Architecture.BuildGdx;
-import ru.m210projects.Build.OnSceenDisplay.Console;
-import ru.m210projects.Build.Render.GLInfo;
-import ru.m210projects.Build.Render.GLRenderer;
-import ru.m210projects.Build.Render.IOverheadMapSettings;
-import ru.m210projects.Build.Render.GdxRender.WorldMesh.GLSurface;
-import ru.m210projects.Build.Render.GdxRender.WorldMesh.Heinum;
+import ru.m210projects.Build.Render.*;
 import ru.m210projects.Build.Render.GdxRender.Scanner.SectorScanner;
 import ru.m210projects.Build.Render.GdxRender.Scanner.VisibleSector;
+import ru.m210projects.Build.Render.GdxRender.Shaders.FadeShader;
 import ru.m210projects.Build.Render.GdxRender.Shaders.ShaderManager;
 import ru.m210projects.Build.Render.GdxRender.Shaders.ShaderManager.Shader;
+import ru.m210projects.Build.Render.GdxRender.WorldMesh.GLSurface;
+import ru.m210projects.Build.Render.GdxRender.WorldMesh.Heinum;
 import ru.m210projects.Build.Render.ModelHandle.GLModel;
 import ru.m210projects.Build.Render.ModelHandle.ModelManager;
 import ru.m210projects.Build.Render.ModelHandle.Voxel.GLVoxel;
-import ru.m210projects.Build.Render.TextureHandle.GLTile;
-import ru.m210projects.Build.Render.TextureHandle.GLTileArray;
-import ru.m210projects.Build.Render.TextureHandle.IndexedShader;
-import ru.m210projects.Build.Render.TextureHandle.IndexedTileData;
-import ru.m210projects.Build.Render.TextureHandle.RGBTileData;
-import ru.m210projects.Build.Render.TextureHandle.TextureManager;
+import ru.m210projects.Build.Render.TextureHandle.*;
 import ru.m210projects.Build.Render.TextureHandle.TextureManager.ExpandTexture;
-import ru.m210projects.Build.Render.TextureHandle.TileAtlas;
-import ru.m210projects.Build.Render.TextureHandle.TileData;
 import ru.m210projects.Build.Render.TextureHandle.TileData.PixelFormat;
-import ru.m210projects.Build.Render.Types.FadeEffect;
-import ru.m210projects.Build.Render.Types.FadeEffect.FadeShader;
-import ru.m210projects.Build.Render.Types.GLFilter;
-import ru.m210projects.Build.Render.Types.Palette;
+import ru.m210projects.Build.Render.Types.Color;
+import ru.m210projects.Build.Render.Types.ScreenFade;
 import ru.m210projects.Build.Render.Types.Spriteext;
+import ru.m210projects.Build.Render.listeners.PaletteListener;
+import ru.m210projects.Build.Render.listeners.PrecacheListener;
+import ru.m210projects.Build.Render.listeners.TileListener;
+import ru.m210projects.Build.Render.listeners.WorldListener;
 import ru.m210projects.Build.Script.DefScript;
 import ru.m210projects.Build.Script.ModelsInfo.SpriteAnim;
-import ru.m210projects.Build.Settings.BuildSettings;
-import ru.m210projects.Build.Settings.GLSettings;
-import ru.m210projects.Build.Types.SECTOR;
-import ru.m210projects.Build.Types.SPRITE;
-import ru.m210projects.Build.Types.Tile;
-import ru.m210projects.Build.Types.Tile.AnimType;
-import ru.m210projects.Build.Types.TileFont;
-import ru.m210projects.Build.Types.WALL;
+import ru.m210projects.Build.Types.*;
+import ru.m210projects.Build.Types.font.Font;
+import ru.m210projects.Build.Types.font.TextAlign;
+import ru.m210projects.Build.filehandle.art.ArtEntry;
+import ru.m210projects.Build.filehandle.art.DynamicArtEntry;
+import ru.m210projects.Build.osd.Console;
+import ru.m210projects.Build.osd.OsdColor;
+import ru.m210projects.Build.settings.GameConfig;
 
-public class GDXRenderer implements GLRenderer {
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+
+import static com.badlogic.gdx.graphics.GL20.*;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+import static ru.m210projects.Build.Engine.*;
+import static ru.m210projects.Build.Pragmas.*;
+import static ru.m210projects.Build.Render.ModelHandle.MDModel.MDAnimation.*;
+
+public class GDXRenderer extends AbstractRenderer implements PaletteListener, WorldListener, TileListener, PrecacheListener {
 
 //	TODO:
 //  Skies panning
@@ -119,150 +88,178 @@ public class GDXRenderer implements GLRenderer {
 //  Duke E2L7 wall vis bug (scanner bug)
 //  Duke E4L11 wall vis bug (scanner bug)
 
-	public Rendering rendering = Rendering.Nothing;
+    protected final float FULLVIS_BEGIN = (float) 2.9e30;
+    protected final float FULLVIS_END = (float) 3.0e30;
+    protected final GLTileArray skycache = new GLTileArray(MAXTILES);
+    private final ArrayList<GLSurface> bunchfirst = new ArrayList<>();
+    public RenderingType renderingType = RenderingType.Nothing;
+    protected TextureManager textureCache;
+    protected ModelManager modelManager;
+    protected boolean isInited = false;
+    protected GL20 gl;
+    protected float defznear = 0.001f;
+    protected float defzfar = 1.0f;
+    protected float fov = 90;
+    protected float fovFactor = 1.0f;
+    protected float gtang = 0.0f;
+    protected WorldMesh world;
+    protected SectorScanner scanner;
+    protected BuildCamera cam;
+    protected SpriteRenderer sprR;
+    protected GDXModelRenderer mdR;
+    protected GDXOrtho orphoRen; // GdxOrphoRen
+    protected DefScript defs;
+    protected ShaderManager manager;
+    protected boolean isUseIndexedTextures;
+    protected Matrix4 transform = new Matrix4();
+    protected Matrix3 texture_transform = new Matrix3();
+    protected Matrix4 identity = new Matrix4();
+    protected ArrayList<VisibleSector> sectors = new ArrayList<VisibleSector>();
+    protected boolean[] mirrorTextures = new boolean[MAXTILES];
+    protected int FOGDISTCONST = 48;
+    private boolean clearStatus = false;
+    private float glox1, gloy1, glox2, gloy2;
+    private Mesh fadeMesh;
 
-	protected TextureManager textureCache;
-	protected ModelManager modelManager;
-	protected final Engine engine;
-	protected boolean isInited = false;
-	protected GL20 gl;
-	protected float defznear = 0.001f;
-	protected float defzfar = 1.0f;
-	protected float fov = 90;
+    public GDXRenderer(GameConfig config) {
+        super(config);
+        this.config.setVideoContext(new GDXVideoContext(this));
+        this.manager = new ShaderManager();
+        Arrays.fill(mirrorTextures, false);
+        int[] mirrors = getMirrorTextures();
+        if (mirrors != null) {
+            for (int mirror : mirrors) {
+                mirrorTextures[mirror] = true;
+            }
+        }
+    }
 
-	protected float gtang = 0.0f;
+    public PaletteManager getPaletteManager() {
+        return paletteManager;
+    }
 
-	protected WorldMesh world;
-	protected SectorScanner scanner;
-	protected BuildCamera cam;
-	protected SpriteRenderer sprR;
-	protected GDXModelRenderer mdR;
-	protected GDXOrtho orphoRen; // GdxOrphoRen
-	protected DefScript defs;
+    @Override
+    public void init(Engine engine) {
+        super.init(engine);
 
-	protected ShaderManager manager;
-	protected boolean isUseIndexedTextures;
+        try {
+            this.textureCache = getTextureManager();
+            this.paletteManager.setListener(this);
+            this.boardService.setListener(this);
+            this.tileManager.setTileListener(this);
+            this.modelManager = new GDXModelManager(this);
+            this.sprR = new SpriteRenderer(engine, this);
+            this.mdR = new GDXModelRenderer(this);
+            this.orphoRen = allocOrphoRenderer(engine);
+            this.scanner = new SectorScanner(engine) {
+                @Override
+                protected Matrix4 getSpriteMatrix(Sprite tspr) {
+                    ArtEntry pic = getTile(tspr.getPicnum());
+                    return sprR.getMatrix(tspr, pic.getWidth(), pic.getHeight());
+                }
+            };
+            this.setDefs(engine.getDefs());
 
-	private ByteBuffer pix32buffer;
-	private ByteBuffer pix8buffer;
-	protected Matrix4 transform = new Matrix4();
-	protected Matrix3 texture_transform = new Matrix3();
-	protected Matrix4 identity = new Matrix4();
+            this.gl = Gdx.graphics.getGL20();
+            GLInfo.init(gl);
 
-	private boolean clearStatus = false;
-	private float glox1, gloy1, glox2, gloy2;
-	private boolean drunk;
-	private float drunkIntensive = 1.0f;
+            gl.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            gl.glPixelStorei(GL_PACK_ALIGNMENT, 1);
 
-	private GLTile frameTexture;
-	private int framew;
-	private int frameh;
+            this.cam = new BuildCamera(fov, xdim, ydim, 512, 8192);
+            PaletteManager paletteManager = engine.getPaletteManager();
+            this.manager.init(textureCache, paletteManager.getShadeCount());
+            if (!this.manager.isInited()) {
+                return;
+            }
 
-	protected ArrayList<VisibleSector> sectors = new ArrayList<VisibleSector>();
-	private final ArrayList<GLSurface> bunchfirst = new ArrayList<GLSurface>();
-	protected boolean[] mirrorTextures = new boolean[MAXTILES];
+            this.fadeMesh = new Mesh(true, 3, 0, new VertexAttribute(VertexAttributes.Usage.Position, 2, ShaderProgram.POSITION_ATTRIBUTE)).setVertices(new float[]{-2.5f, 1.0f, 2.5f, 1.0f, 0.0f, -2.5f});
+            this.textureCache.changePalette(paletteManager.getCurrentPalette().getBytes());
 
-	protected int FOGDISTCONST = 48;
-	protected final float FULLVIS_BEGIN = (float) 2.9e30;
-	protected final float FULLVIS_END = (float) 3.0e30;
+            Console.out.println("Polygdx renderer is initialized", OsdColor.GREEN);
+            Console.out.println(Gdx.graphics.getGLVersion().getRendererString() + " " + gl.glGetString(GL_VERSION),
+                    OsdColor.YELLOW);
 
-	public GDXRenderer(Engine engine, IOverheadMapSettings settings) {
-		this.engine = engine;
-		this.textureCache = getTextureManager();
-		this.modelManager = new GDXModelManager(this);
-		this.manager = new ShaderManager();
+            orphoRen.init();
 
-		this.sprR = new SpriteRenderer(engine, this);
-		this.mdR = new GDXModelRenderer(this);
-		this.orphoRen = allocOrphoRenderer(settings);
-		this.scanner = new SectorScanner(engine) {
-			@Override
-			protected Matrix4 getSpriteMatrix(SPRITE tspr) {
-				Tile pic = engine.getTile(tspr.picnum);
-				return sprR.getMatrix(tspr, pic.getWidth(), pic.getHeight());
-			}
-		};
+            if (world != null && world.isInvalid()) {
+                world = new WorldMesh(engine);
+            }
 
-		Arrays.fill(mirrorTextures, false);
-		int[] mirrors = getMirrorTextures();
-		if (mirrors != null) {
-			for (int i = 0; i < mirrors.length; i++)
-				mirrorTextures[mirrors[i]] = true;
-		}
+            // init gl settings
+            config.setGlfilter(config.getGlfilter());
+            config.setPaletteEmulation(config.isPaletteEmulation());
+            config.setUseHighTiles(config.isUseHighTiles());
+            config.setDetailMapping(config.isDetailMapping());
+            config.setGlowMapping(config.isGlowMapping());
 
-		System.err.println("create");
-	}
+            isInited = true;
+        } catch (Throwable t) {
+            isInited = false;
+        }
+    }
 
-	@Override
-	public void init() {
-		try {
-			if (BuildGdx.graphics.getFrameType() != FrameType.GL)
-				BuildGdx.app.setFrame(FrameType.GL);
+    @Override
+    public void resize(int width, int height) {
+        if ((width == xdim) && (height == ydim)) {
+            return;
+        }
 
-			GLInfo.init();
-			this.gl = BuildGdx.graphics.getGL20();
+        xdim = width;
+        ydim = height;
 
-			enableIndexedShader(GLSettings.usePaletteShader.get());
+        config.setgFov(config.getgFov());
+        setview(0, 0, xdim - 1, ydim - 1);
+        resizeglcheck();
+    }
 
-			gl.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			gl.glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    @Override
+    public int getWidth() {
+        return xdim;
+    }
 
-			this.cam = new BuildCamera(fov, xdim, ydim, 512, 8192);
-			this.manager.init(textureCache);
-			if (!this.manager.isInited())
-				return;
+    @Override
+    public int getHeight() {
+        return ydim;
+    }
 
-			this.textureCache.changePalette(curpalette.getBytes());
+    @Override
+    public void uninit() {
+        System.err.println("uninit");
+        paletteManager.setListener(PaletteListener.DUMMY_PALETTE_CHANGE_LISTENER);
+        engine.getBoardService().setListener(WorldListener.DUMMY_LISTENER);
+        engine.getTileManager().setTileListener(TileListener.DUMMY_LISTENER);
+        isInited = false;
+        if (world != null) {
+            world.dispose();
+        }
+        orphoRen.uninit();
+        manager.dispose();
+        fadeMesh.dispose();
+        texturesUninit();
+        modelManager.dispose();
+    }
 
-			Console.Println("Polygdx renderer is initialized", OSDTEXT_GOLD);
-			Console.Println(BuildGdx.graphics.getGLVersion().getRendererString() + " " + gl.glGetString(GL_VERSION),
-					OSDTEXT_GOLD);
+    private void texturesUninit() {
+        textureCache.uninit();
+        for (int i = MAXTILES - 1; i >= 0; i--) {
+            skycache.dispose(i);
+        }
+    }
 
-			orphoRen.init();
+    @Override
+    public void drawrooms() {
+        if (orphoRen.isDrawing()) {
+            orphoRen.flush(); // #GDX 30.07.2024 was end()
+        }
 
-			if (world != null && world.isInvalid()) {
-				world = new WorldMesh(engine);
-			}
-
-			System.err.println("init");
-			isInited = true;
-		} catch (Throwable t) {
-			isInited = false;
-		}
-	}
-
-	@Override
-	public void uninit() {
-		System.err.println("uninit");
-		isInited = false;
-		if (world != null)
-			world.dispose();
-		orphoRen.uninit();
-		manager.dispose();
-		FadeEffect.uninit();
-		texturesUninit();
-		modelManager.dispose();
-	}
-
-	private void texturesUninit() {
-		textureCache.uninit();
-		for (int i = MAXTILES - 1; i >= 0; i--) {
-			skycache.dispose(i);
-		}
-	}
-
-	@Override
-	public void drawrooms() {
-		if (orphoRen.isDrawing())
-			orphoRen.end();
-
-		// Temporaly code (Tekwar issue)
+        // Temporaly code (Tekwar issue)
 //		else if (!clearStatus) { // once at frame
 //			gl.glClearColor(0.0f, 0.5f, 0.5f, 1);
 //			gl.glClear(GL_COLOR_BUFFER_BIT);
 //			clearStatus = true;
 //		}
-		gl.glClear(GL_DEPTH_BUFFER_BIT);
+        gl.glClear(GL_DEPTH_BUFFER_BIT);
 
 //		if (shape == null) {
 //			shape = new ShapeRenderer();
@@ -270,61 +267,64 @@ public class GDXRenderer implements GLRenderer {
 //		}
 //		shape.begin(ShapeType.Line);
 
-		gl.glDisable(GL_BLEND);
-		gl.glEnable(GL_TEXTURE_2D);
-		gl.glEnable(GL_DEPTH_TEST);
+        gl.glDisable(GL_BLEND);
+        gl.glEnable(GL_TEXTURE_2D);
+        gl.glEnable(GL_DEPTH_TEST);
 
-		gl.glDepthFunc(GL_LESS);
-		gl.glDepthRangef(defznear, defzfar);
+        gl.glDepthFunc(GL_LESS);
+        gl.glDepthRangef(defznear, defzfar);
 
-		gl.glEnable(GL_CULL_FACE);
-		gl.glFrontFace(GL_CW);
-		resizeglcheck();
+        gl.glEnable(GL_CULL_FACE);
+        gl.glFrontFace(GL_CW);
+        resizeglcheck();
 
-		cam.setPosition(globalposx, globalposy, globalposz);
-		cam.setDirection(globalang, globalhoriz, gtang);
-		cam.update(true);
+        cam.setPosition(globalposx, globalposy, globalposz);
+        cam.setDirection(globalang, globalhoriz, inpreparemirror ? -gtang : gtang);
+        cam.update(true);
 
-		globalvisibility = visibility << 2;
-		if (globalcursectnum >= MAXSECTORS) {
-			globalcursectnum -= MAXSECTORS;
-		} else {
-			short i = globalcursectnum;
-			globalcursectnum = engine.updatesectorz(globalposx, globalposy, globalposz, globalcursectnum);
-			if (globalcursectnum < 0)
-				globalcursectnum = i;
-		}
+        globalvisibility = visibility << 2;
+        if (globalcursectnum >= boardService.getSectorCount()) {
+            globalcursectnum -= boardService.getSectorCount();
+        } else {
+            int i = globalcursectnum;
+            globalcursectnum = engine.updatesectorz(globalposx, globalposy, globalposz, globalcursectnum);
+            if (globalcursectnum < 0) {
+                globalcursectnum = i;
+            }
+        }
 
-		sectors.clear();
-		scanner.clear();
-		scanner.process(sectors, cam, world, globalcursectnum);
+        sectors.clear();
+        scanner.clear();
+        scanner.setShowInvisibility(showinvisibility);
+        scanner.process(sectors, cam, world, globalcursectnum, windowx2 + 1, windowy2 + 1);
 
-		rendering = Rendering.Nothing;
-		if (inpreparemirror)
-			gl.glCullFace(GL_FRONT);
-		else
-			gl.glCullFace(GL_BACK);
+        renderingType = RenderingType.Nothing;
+        if (inpreparemirror) {
+            gl.glCullFace(GL_FRONT);
+        } else {
+            gl.glCullFace(GL_BACK);
+        }
 
-		prerender(sectors);
-		drawbackground();
+        prerender(sectors);
+        drawbackground();
 
-		// пройтись по всем секторам с небом, создать лист отображаемых текстур
-		// пройтись по листу, отрисовать все меши одной текстуры с записью в глубину
-		// отрисовать скайбокс с совпадением по глубине
-		// после отрисовки, отчистить буфер глубины и записать значения mirrors
+        // пройтись по всем секторам с небом, создать лист отображаемых текстур
+        // пройтись по листу, отрисовать все меши одной текстуры с записью в глубину
+        // отрисовать скайбокс с совпадением по глубине
+        // после отрисовки, отчистить буфер глубины и записать значения mirrors
 
-		for (int i = inpreparemirror ? 1 : 0; i < sectors.size(); i++) {
-			drawSector(sectors.get(i));
-		}
+        for (int i = inpreparemirror ? 1 : 0; i < sectors.size(); i++) {
+            drawSector(sectors.get(i));
+        }
 
-		spritesortcnt = scanner.getSpriteCount();
-		tsprite = scanner.getSprites();
+//        spritesortcnt = scanner.getSpriteCount();
+        tSpriteList = scanner.getSprites();
 
-		manager.unbind();
-	}
+        manager.unbind();
+    }
 
-	@Override
-	public void drawmasks() {
+    @Override
+    public void drawmasks() {
 //		for (int i = inpreparemirror ? 1 : 0; i < sectors.size(); i++) {
 //			VisibleSector sec = sectors.get(i);
 //
@@ -345,906 +345,948 @@ public class GDXRenderer implements GLRenderer {
 //		while (maskwallcnt > 0)
 //			drawmaskwall(--maskwallcnt);
 
-		int[] maskwalls = scanner.getMaskwalls();
-		int maskwallcnt = scanner.getMaskwallCount();
-
-		sprR.sort(tsprite, spritesortcnt);
-
-		while ((spritesortcnt > 0) && (maskwallcnt > 0)) { // While BOTH > 0
-			int j = maskwalls[maskwallcnt - 1];
-			if (!spritewallfront(tsprite[spritesortcnt - 1], j))
-				drawsprite(--spritesortcnt);
-			else {
-				// Check to see if any sprites behind the masked wall...
-				for (int i = spritesortcnt - 2; i >= 0; i--) {
-					if (!spritewallfront(tsprite[i], j)) {
-						drawsprite(i);
-						tsprite[i] = null;
-					}
-				}
-				// finally safe to draw the masked wall
-				drawmaskwall(--maskwallcnt);
-			}
-		}
-
-		while (spritesortcnt != 0) {
-			spritesortcnt--;
-			if (tsprite[spritesortcnt] != null) {
-				drawsprite(spritesortcnt);
-			}
-		}
-
-		while (maskwallcnt > 0)
-			drawmaskwall(--maskwallcnt);
-
-		renderDrunkEffect();
-		manager.unbind();
-	}
-
-	private void drawMask(int w) {
-		gl.glDepthFunc(GL20.GL_LESS);
-		gl.glDepthRangef(0.0001f, 0.99999f);
-
-		drawSurf(world.getMaskedWall(w), 0, null, null);
-
-		gl.glDepthFunc(GL20.GL_LESS);
-		gl.glDepthRangef(defznear, defzfar);
-	}
-
-	protected void renderDrunkEffect() { // TODO: to shader
-		/*
-		 * if (drunk) { set2dview();
-		 *
-		 * gl.glActiveTexture(GL_TEXTURE0); boolean hasShader = texshader != null &&
-		 * texshader.isBinded(); if (hasShader) texshader.end();
-		 *
-		 * if (frameTexture == null || framew != xdim || frameh != ydim) { int size = 1;
-		 * for (size = 1; size < Math.max(xdim, ydim); size <<= 1) ;
-		 *
-		 * if (frameTexture != null) frameTexture.dispose(); else frameTexture = new
-		 * GLTile(PixelFormat.Rgb, size, size);
-		 *
-		 * frameTexture.bind(); gl.glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
-		 * frameTexture.getWidth(), frameTexture.getHeight(), 0, GL_RGB,
-		 * GL_UNSIGNED_BYTE, null); frameTexture.unsafeSetFilter(TextureFilter.Linear,
-		 * TextureFilter.Linear); framew = xdim; frameh = ydim; }
-		 *
-		 * textureCache.bind(frameTexture); gl.glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0,
-		 * 0, 0, 0, frameTexture.getWidth(), frameTexture.getHeight());
-		 *
-		 * gl.glDisable(GL_DEPTH_TEST); gl.glDisable(GL_CULL_FACE);
-		 *
-		 * float tiltang = (drunkIntensive * 360) / 2048f; float tilt = min(max(tiltang,
-		 * -MAXDRUNKANGLE), MAXDRUNKANGLE); float u = (float) xdim /
-		 * frameTexture.getWidth(); float v = (float) ydim / frameTexture.getHeight();
-		 *
-		 * int originX = xdim / 2; int originY = ydim / 2; float width = xdim * 1.05f;
-		 * float height = ydim * 1.05f;
-		 *
-		 * float xoffs = width / 2; float yoffs = height / 2;
-		 *
-		 * final float rotation = 360.0f * tiltang / 2048.0f; final float cos =
-		 * MathUtils.cosDeg(rotation); final float sin = MathUtils.sinDeg(rotation);
-		 *
-		 * float x1 = originX + (sin * yoffs - cos * xoffs); float y1 = originY - xoffs
-		 * * sin - yoffs * cos;
-		 *
-		 * float x4 = x1 + width * cos; float y4 = y1 + width * sin;
-		 *
-		 * float x2 = x1 - height * sin; float y2 = y1 + height * cos;
-		 *
-		 * float x3 = x2 + (x4 - x1); float y3 = y2 + (y4 - y1);
-		 *
-		 * orphoRen.begin(); // XXX // orphoRen.setColor(1, 1, 1, abs(tilt) / (2 *
-		 * MAXDRUNKANGLE)); // orphoRen.setTexture(frameTexture); //
-		 * orphoRen.addVertex(x1, ydim - y1, 0, 0); // orphoRen.addVertex(x2, ydim - y2,
-		 * 0, v); // orphoRen.addVertex(x3, ydim - y3, u, v); // orphoRen.addVertex(x4,
-		 * ydim - y4, u, 0); orphoRen.end();
-		 *
-		 * gl.glEnable(GL_DEPTH_TEST); gl.glEnable(GL_CULL_FACE);
-		 *
-		 * if (hasShader) texshader.begin(); }
-		 */
-	}
-
-	public void drawsprite(int i) {
-		SPRITE tspr = tsprite[i];
-		if (tspr == null || tspr.owner == -1)
-			return;
-
-		Spriteext sprext = defs.mapInfo.getSpriteInfo(tspr.owner);
-		while (sprext == null || !sprext.isNotModel()) {
-			rendering = Rendering.Model.setIndex(i);
-
-			if (GLSettings.useModels.get()) {
-				GLModel md = modelManager.getModel(tspr.picnum, tspr.pal);
-				if (md != null) {
-					if (tspr.owner < 0 || tspr.owner >= MAXSPRITES) {
-						if (mdR.mddraw(md, tspr))
-							return;
-						break; // else, render as flat sprite
-					}
-
-					if (mdR.mddraw(md, tspr))
-						return;
-					break; // else, render as flat sprite
-				}
-			}
-
-			if (BuildSettings.useVoxels.get()) {
-				int picnum = tspr.picnum;
-				if (engine.getTile(picnum).getType() != AnimType.None) {
-					picnum += engine.animateoffs(picnum, tspr.owner + 32768);
-				}
-
-				int dist = (tspr.x - globalposx) * (tspr.x - globalposx)
-						+ (tspr.y - globalposy) * (tspr.y - globalposy);
-				if (dist < 48000L * 48000L) {
-					GLVoxel vox = (GLVoxel) modelManager.getVoxel(picnum);
-					if (vox != null) {
-						if ((tspr.cstat & 48) != 48) {
-							if (mdR.mddraw(vox, tspr))
-								return;
-							break; // else, render as flat sprite
-						}
-
-						if ((tspr.cstat & 48) == 48) {
-							mdR.mddraw(vox, tspr);
-							return;
-						}
-					}
-				}
-			}
-			break;
-		}
-
-		rendering = Rendering.Sprite.setIndex(i);
-		sprR.begin(cam);
-		sprR.draw(tspr);
-		sprR.end();
-	}
-
-	private void drawmaskwall(int i) {
-		rendering = Rendering.MaskWall.setIndex(i);
-		drawMask(scanner.getMaskwalls()[i]);
-	}
-
-	protected void drawbackground() {
-		rendering = Rendering.Skybox;
-		drawSkyPlanes();
-		for (int i = inpreparemirror ? 1 : 0; i < sectors.size(); i++)
-			drawSkySector(sectors.get(i));
-	}
-
-	private void prerender(ArrayList<VisibleSector> sectors) {
-		if (inpreparemirror)
-			return;
-
-		bunchfirst.clear();
-
-		for (int i = 0; i < sectors.size(); i++) {
-			VisibleSector sec = sectors.get(i);
-
-			int sectnum = sec.index;
-			if ((sec.secflags & 1) != 0)
-				checkMirror(world.getFloor(sectnum));
-
-			if ((sec.secflags & 2) != 0)
-				checkMirror(world.getCeiling(sectnum));
-
-			for (int w = 0; w < sec.walls.size; w++) {
-				int z = sec.walls.get(w);
-				int flags = sec.wallflags.get(w);
-
-				checkMirror(world.getWall(z, sectnum));
-				if ((flags & 1) != 0)
-					checkMirror(world.getLower(z, sectnum));
-				if ((flags & 2) != 0)
-					checkMirror(world.getUpper(z, sectnum));
-				checkMirror(world.getMaskedWall(z));
-			}
-
-			for (int w = 0; w < sec.skywalls.size; w++) {
-				int z = sec.skywalls.get(w);
-				checkMirror(world.getParallaxCeiling(z));
-				checkMirror(world.getParallaxFloor(z));
-			}
-		}
-
-		for (int i = 0; i < bunchfirst.size(); i++) {
-			drawSurf(bunchfirst.get(i), 0, null, null);
-		}
-	}
-
-	private void checkMirror(GLSurface surf) {
-		if (surf == null)
-			return;
-
-		int picnum = surf.picnum;
-		if (mirrorTextures[picnum]) {
-			bunchfirst.add(surf);
-		}
-	}
-
-	private void drawSkyPlanes() {
-		gl.glDisable(GL_CULL_FACE);
-		gl.glDepthMask(false);
-
-		SECTOR skysector;
-		if ((skysector = scanner.getLastSkySector(Heinum.SkyUpper)) != null) {
-			int pal = skysector.ceilingpal;
-			int shade = skysector.ceilingshade;
-			int picnum = skysector.ceilingpicnum;
-
-			drawSky(world.getQuad(), picnum, shade, pal, 0,
-					transform.setToTranslation(cam.position.x, cam.position.y, cam.position.z - 100).scale(cam.far,
-							cam.far, 1.0f));
-		}
-
-		if ((skysector = scanner.getLastSkySector(Heinum.SkyLower)) != null) {
-			int pal = skysector.floorpal;
-			int shade = skysector.floorshade;
-			int picnum = skysector.floorpicnum;
-
-			drawSky(world.getQuad(), picnum, shade, pal, 0,
-					transform.setToTranslation(cam.position.x, cam.position.y, cam.position.z + 100).scale(cam.far,
-							cam.far, 1.0f));
-		}
-
-		gl.glDepthMask(true);
-		gl.glEnable(GL_CULL_FACE);
-	}
-
-	private void drawSector(VisibleSector sec) {
-		int sectnum = sec.index;
-		gotsector[sectnum >> 3] |= pow2char[sectnum & 7];
-
-		if ((sec.secflags & 1) != 0) {
-			rendering = Rendering.Floor.setIndex(sectnum);
-			drawSurf(world.getFloor(sectnum), 0, null, sec.clipPlane);
-		}
-
-		if ((sec.secflags & 2) != 0) {
-			rendering = Rendering.Ceiling.setIndex(sectnum);
-			drawSurf(world.getCeiling(sectnum), 0, null, sec.clipPlane);
-		}
-
-		for (int w = 0; w < sec.walls.size; w++) {
-			int flags = sec.wallflags.get(w);
-			int z = sec.walls.get(w);
-			rendering = Rendering.Wall.setIndex(z);
-			drawSurf(world.getWall(z, sectnum), flags, null, sec.clipPlane);
-			drawSurf(world.getUpper(z, sectnum), flags, null, sec.clipPlane);
-			drawSurf(world.getLower(z, sectnum), flags, null, sec.clipPlane);
-		}
-	}
-
-	public void drawSkySector(VisibleSector sec) {
-		for (int w = 0; w < sec.skywalls.size; w++) {
-			int z = sec.skywalls.get(w);
-			GLSurface ceil = world.getParallaxCeiling(z);
-			if (ceil != null) {
-				drawSky(ceil, ceil.picnum, ceil.getShade(), ceil.getPal(), ceil.getMethod(), identity);
-			}
-
-			GLSurface floor = world.getParallaxFloor(z);
-			if (floor != null) {
-				drawSky(floor, floor.picnum, floor.getShade(), floor.getPal(), floor.getMethod(), identity);
-			}
-		}
-	}
-
-	private void drawSky(GLSurface surf, int picnum, int shade, int palnum, int method, Matrix4 worldTransform) {
-		if (surf.count == 0)
-			return;
-
-		if (engine.getTile(picnum).getType() != AnimType.None)
-			picnum += engine.animateoffs(picnum, 0);
-
-		Tile pic = engine.getTile(picnum);
-		if (!pic.isLoaded())
-			engine.loadtile(picnum);
-
-		if (!pic.isLoaded())
-			method = 1; // invalid data, HOM
-
-		engine.setgotpic(picnum);
-		if (palookup[palnum] == null)
-			palnum = 0;
-
-		GLTile pth = bindSky(picnum, palnum, shade, method);
-		if (pth != null) {
-			Gdx.gl.glDisable(GL_BLEND);
-			if ((method & 3) != 0)
-				Gdx.gl.glEnable(GL_BLEND);
-
-			manager.fog(false, 0, 0, 0, 0, 0);
-			manager.transform(worldTransform);
-			manager.frustum(null);
-
-			surf.render(manager.getProgram());
-		}
-	}
-
-	protected void drawSurf(GLSurface surf, int flags, Matrix4 worldTransform, Plane[] clipPlane) {
-		if (surf == null)
-			return;
-
-		if (surf.count != 0 && (flags == 0 || (surf.visflag & flags) != 0)) {
-			int picnum = surf.picnum;
-
-			if (engine.getTile(picnum).getType() != AnimType.None)
-				picnum += engine.animateoffs(picnum, 0);
-
-			Tile pic = engine.getTile(picnum);
-			if (!pic.isLoaded())
-				engine.loadtile(picnum);
-
-			int method = surf.getMethod();
-			if (!pic.isLoaded()) {
-				method = 1; // invalid data, HOM
-			}
-
-			engine.setgotpic(picnum);
-			GLTile pth = bind(picnum, surf.getPal(), surf.getShade(), 0, method);
-			if (pth != null) {
-				int combvis = globalvisibility;
-				int vis = surf.getVisibility();
-				if (vis != 0)
-					combvis = mulscale(globalvisibility, (vis + 16) & 0xFF, 4);
-
-				if (pth.getPixelFormat() == PixelFormat.Pal8)
-					((IndexedShader) manager.getProgram()).setVisibility((int) (-combvis / 64.0f));
-				else {
-					calcFog(surf.getPal(), surf.getShade(), combvis);
-				}
-
-				manager.color(1.0f, 1.0f, 1.0f, 1.0f);
-				if (pth.isHighTile()) {
-					int tsizy = 1;
-					for (; tsizy < pic.getHeight(); tsizy += tsizy);
-					if((pic.getWidth() / (float) pic.getHeight()) != (pth.getWidth() / (float) pth.getHeight())) {
-						texture_transform.scale(1.0f, (tsizy * pth.getYScale()) / pth.getHeight());
-					}
-					manager.textureTransform(texture_transform, 0);
-
-					if (defs != null && defs.texInfo != null) {
-						float r = 1, g = 1, b = 1;
-						if (pth.getPal() != surf.getPal()) {
-							// apply tinting for replaced textures
-
-							Palette p = defs.texInfo.getTints(surf.getPal());
-							r *= p.r / 255.0f;
-							g *= p.g / 255.0f;
-							b *= p.b / 255.0f;
-						}
-
-						Palette pdetail = defs.texInfo.getTints(MAXPALOOKUPS - 1);
-						if (pdetail.r != 255 || pdetail.g != 255 || pdetail.b != 255) {
-							r *= pdetail.r / 255.0f;
-							g *= pdetail.g / 255.0f;
-							b *= pdetail.b / 255.0f;
-						}
-						manager.color(r, g, b, 1.0f);
-					}
-				}
-
-				if (worldTransform == null)
-					manager.transform(identity);
-				else
-					manager.transform(worldTransform);
-
-				if (clipPlane != null && !inpreparemirror)
-					manager.frustum(clipPlane);
-				else
-					manager.frustum(null);
-
-				if ((method & 3) == 0)
-					Gdx.gl.glDisable(GL_BLEND);
-				else
-					Gdx.gl.glEnable(GL_BLEND);
-
-				surf.render(manager.getProgram());
-			}
-		}
-	}
-
-	protected void calcFog(int pal, int shade, float combvis) {
-		float start = FULLVIS_BEGIN;
-		float end = FULLVIS_END;
-		if (combvis != 0) {
-			if (shade >= numshades - 1) {
-				start = -1;
-				end = 0.001f;
-			} else {
-				start = (shade > 0) ? 0 : -(FOGDISTCONST * shade) / combvis;
-				end = (FOGDISTCONST * (numshades - 1 - shade)) / combvis;
-			}
-		}
-
-		float r = (palookupfog[pal][0] / 63.f);
-		float g = (palookupfog[pal][1] / 63.f);
-		float b = (palookupfog[pal][2] / 63.f);
-
-		manager.fog(true, start, end, r, g, b);
-	}
-
-	@Override
-	public void clearview(int dacol) {
-		gl.glClearColor(curpalette.getRed(dacol) / 255.0f, //
-				curpalette.getGreen(dacol) / 255.0f, //
-				curpalette.getBlue(dacol) / 255.0f, 0); //
-		gl.glClear(GL_COLOR_BUFFER_BIT);
-	}
-
-	@Override
-	public void changepalette(byte[] palette) {
-		textureCache.changePalette(palette);
-	}
-
-	@Override
-	public void nextpage() {
-		clearStatus = false;
-		if (world != null)
-			world.nextpage();
-		orphoRen.nextpage();
-		manager.reset();
-		textureCache.unbind();
-
-		omdtims = mdtims;
-		mdtims = engine.getticks();
-
-		for (int i = 0; i < MAXSPRITES; i++) {
-			if (mdpause != 0) {
-				SpriteAnim sprext = defs.mdInfo.getAnimParams(i);
-				if (sprext == null)
-					continue;
-
-				boolean isAnimationDisabled = false;
-				Spriteext inf = defs.mapInfo.getSpriteInfo(i);
-				if (inf != null)
-					isAnimationDisabled = inf.isAnimationDisabled();
-
-				if ((mdpause != 0 && sprext.mdanimtims != 0) || isAnimationDisabled)
-					sprext.mdanimtims += mdtims - omdtims;
-			}
-		}
-
-		beforedrawrooms = 1;
+        int[] maskwalls = scanner.getMaskwalls();
+        int maskwallcnt = scanner.getMaskwallCount();
+
+        RenderedSpriteList spriteList = getRenderedSprites();
+        int spritesortcnt = spriteList.getSize();
+        sprR.sort(spriteList.getArray(), spritesortcnt);
+
+        while ((spritesortcnt > 0) && (maskwallcnt > 0)) { // While BOTH > 0
+            int j = maskwalls[maskwallcnt - 1];
+
+            if (!spritewallfront(spriteList.get(spritesortcnt - 1), j)) {
+                spriteList.removeLast();
+                drawsprite(--spritesortcnt);
+            } else {
+                // Check to see if any sprites behind the masked wall...
+                for (int i = spritesortcnt - 2; i >= 0; i--) {
+                    TSprite tsprite = spriteList.get(i);
+                    if (!spritewallfront(tsprite, j)) {
+                        drawsprite(i);
+                        tsprite.setOwner(-1); //  tsprite[i] = null;
+                    }
+                }
+                // finally safe to draw the masked wall
+                drawmaskwall(--maskwallcnt);
+            }
+        }
+
+        while (spritesortcnt != 0) {
+            spritesortcnt--;
+            TSprite tsprite = spriteList.get(spritesortcnt);
+            if (tsprite.getOwner() != -1) {
+                drawsprite(spritesortcnt);
+            }
+        }
+
+        while (maskwallcnt > 0) {
+            drawmaskwall(--maskwallcnt);
+        }
+
+        renderDrunkEffect();
+        manager.unbind();
+    }
+
+    private void drawMask(int w) {
+        gl.glDepthFunc(GL20.GL_LESS);
+        gl.glDepthRangef(0.0001f, 0.99999f);
+
+        drawSurf(world.getMaskedWall(w), 0, null, null);
+
+        gl.glDepthFunc(GL20.GL_LESS);
+        gl.glDepthRangef(defznear, defzfar);
+    }
+
+    protected void renderDrunkEffect() { // TODO: to shader
+        /*
+         * if (drunk) { set2dview();
+         *
+         * gl.glActiveTexture(GL_TEXTURE0); boolean hasShader = texshader != null &&
+         * texshader.isBinded(); if (hasShader) texshader.end();
+         *
+         * if (frameTexture == null || framew != xdim || frameh != ydim) { int size = 1;
+         * for (size = 1; size < Math.max(xdim, ydim); size <<= 1) ;
+         *
+         * if (frameTexture != null) frameTexture.dispose(); else frameTexture = new
+         * GLTile(PixelFormat.Rgb, size, size);
+         *
+         * frameTexture.bind(); gl.glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
+         * frameTexture.getWidth(), frameTexture.getHeight(), 0, GL_RGB,
+         * GL_UNSIGNED_BYTE, null); frameTexture.unsafeSetFilter(TextureFilter.Linear,
+         * TextureFilter.Linear); framew = xdim; frameh = ydim; }
+         *
+         * textureCache.bind(frameTexture); gl.glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0,
+         * 0, 0, 0, frameTexture.getWidth(), frameTexture.getHeight());
+         *
+         * gl.glDisable(GL_DEPTH_TEST); gl.glDisable(GL_CULL_FACE);
+         *
+         * float tiltang = (drunkIntensive * 360) / 2048f; float tilt = min(max(tiltang,
+         * -MAXDRUNKANGLE), MAXDRUNKANGLE); float u = (float) xdim /
+         * frameTexture.getWidth(); float v = (float) ydim / frameTexture.getHeight();
+         *
+         * int originX = xdim / 2; int originY = ydim / 2; float width = xdim * 1.05f;
+         * float height = ydim * 1.05f;
+         *
+         * float xoffs = width / 2; float yoffs = height / 2;
+         *
+         * final float rotation = 360.0f * tiltang / 2048.0f; final float cos =
+         * MathUtils.cosDeg(rotation); final float sin = MathUtils.sinDeg(rotation);
+         *
+         * float x1 = originX + (sin * yoffs - cos * xoffs); float y1 = originY - xoffs
+         * * sin - yoffs * cos;
+         *
+         * float x4 = x1 + width * cos; float y4 = y1 + width * sin;
+         *
+         * float x2 = x1 - height * sin; float y2 = y1 + height * cos;
+         *
+         * float x3 = x2 + (x4 - x1); float y3 = y2 + (y4 - y1);
+         *
+         * orphoRen.begin(); // XXX // orphoRen.setColor(1, 1, 1, abs(tilt) / (2 *
+         * MAXDRUNKANGLE)); // orphoRen.setTexture(frameTexture); //
+         * orphoRen.addVertex(x1, ydim - y1, 0, 0); // orphoRen.addVertex(x2, ydim - y2,
+         * 0, v); // orphoRen.addVertex(x3, ydim - y3, u, v); // orphoRen.addVertex(x4,
+         * ydim - y4, u, 0); orphoRen.end();
+         *
+         * gl.glEnable(GL_DEPTH_TEST); gl.glEnable(GL_CULL_FACE);
+         *
+         * if (hasShader) texshader.begin(); }
+         */
+    }
+
+    public void drawsprite(int i) {
+        Sprite tspr = tSpriteList.get(i);
+        if (tspr == null || tspr.getOwner() == -1) {
+            return;
+        }
+
+        Spriteext sprext = defs.mapInfo.getSpriteInfo(tspr.getOwner());
+        while (sprext == null || !sprext.isNotModel()) {
+            renderingType = RenderingType.Model.setIndex(i);
+
+            if (engine.getConfig().isUseModels()) {
+                GLModel md = modelManager.getModel(tspr.getPicnum(), tspr.getPal());
+                if (md != null) {
+                    if (boardService.isValidSprite(tspr.getOwner())) {
+                        if (mdR.mddraw(md, tspr)) {
+                            return;
+                        }
+                        break; // else, render as flat sprite
+                    }
+
+                    if (mdR.mddraw(md, tspr)) {
+                        return;
+                    }
+                    break; // else, render as flat sprite
+                }
+            }
+
+            if (engine.getConfig().isUseVoxels()) {
+                int picnum = tspr.getPicnum();
+                if (getTile(picnum).getType() != AnimType.NONE) {
+                    picnum += animateoffs(picnum, tspr.getOwner() + 32768);
+                }
+
+                int dist = (tspr.getX() - globalposx) * (tspr.getX() - globalposx)
+                        + (tspr.getY() - globalposy) * (tspr.getY() - globalposy);
+                if (dist < 48000L * 48000L) {
+                    GLVoxel vox = (GLVoxel) modelManager.getVoxel(picnum);
+                    if (vox != null) {
+                        if ((tspr.getCstat() & 48) != 48) {
+                            if (mdR.mddraw(vox, tspr)) {
+                                return;
+                            }
+                            break; // else, render as flat sprite
+                        }
+
+                        if ((tspr.getCstat() & 48) == 48) {
+                            mdR.mddraw(vox, tspr);
+                            return;
+                        }
+                    }
+                }
+            }
+            break;
+        }
+
+        renderingType = RenderingType.Sprite.setIndex(i);
+        sprR.begin(cam);
+        sprR.draw(tspr);
+        sprR.end();
+    }
+
+    private void drawmaskwall(int i) {
+        renderingType = RenderingType.MaskWall.setIndex(i);
+        drawMask(scanner.getMaskwalls()[i]);
+    }
+
+    protected void drawbackground() {
+        renderingType = RenderingType.Skybox;
+        drawSkyPlanes();
+        for (int i = inpreparemirror ? 1 : 0; i < sectors.size(); i++) {
+            drawSkySector(sectors.get(i));
+        }
+    }
+
+    private void prerender(ArrayList<VisibleSector> sectors) {
+        if (inpreparemirror) {
+            return;
+        }
+
+        bunchfirst.clear();
+
+        for (int i = 0; i < sectors.size(); i++) {
+            VisibleSector sec = sectors.get(i);
+
+            int sectnum = sec.index;
+            if ((sec.secflags & 1) != 0) {
+                checkMirror(world.getFloor(sectnum));
+            }
+
+            if ((sec.secflags & 2) != 0) {
+                checkMirror(world.getCeiling(sectnum));
+            }
+
+            for (int w = 0; w < sec.walls.size; w++) {
+                int z = sec.walls.get(w);
+                int flags = sec.wallflags.get(w);
+
+                checkMirror(world.getWall(z, sectnum));
+                if ((flags & 1) != 0) {
+                    checkMirror(world.getLower(z));
+                }
+                if ((flags & 2) != 0) {
+                    checkMirror(world.getUpper(z));
+                }
+                checkMirror(world.getMaskedWall(z));
+            }
+
+            for (int w = 0; w < sec.skywalls.size; w++) {
+                int z = sec.skywalls.get(w);
+                checkMirror(world.getParallaxCeiling(z));
+                checkMirror(world.getParallaxFloor(z));
+            }
+        }
+
+        for (int i = 0; i < bunchfirst.size(); i++) {
+            drawSurf(bunchfirst.get(i), 0, null, null);
+        }
+    }
+
+    private void checkMirror(GLSurface surf) {
+        if (surf == null) {
+            return;
+        }
+
+        int picnum = surf.picnum;
+        if (mirrorTextures[picnum]) {
+            bunchfirst.add(surf);
+        }
+    }
+
+    private void drawSkyPlanes() {
+        gl.glDisable(GL_CULL_FACE);
+        gl.glDepthMask(false);
+
+        Sector skysector;
+        if ((skysector = scanner.getLastSkySector(Heinum.SkyUpper)) != null) {
+            int pal = skysector.getCeilingpal();
+            int shade = skysector.getCeilingshade();
+            int picnum = skysector.getCeilingpicnum();
+
+            drawSky(world.getQuad(), picnum, shade, pal, 0,
+                    transform.setToTranslation(cam.position.x, cam.position.y, cam.position.z - 100).scale(cam.far,
+                            cam.far, 1.0f));
+        }
+
+        if ((skysector = scanner.getLastSkySector(Heinum.SkyLower)) != null) {
+            int pal = skysector.getFloorpal();
+            int shade = skysector.getFloorshade();
+            int picnum = skysector.getFloorpicnum();
+
+            drawSky(world.getQuad(), picnum, shade, pal, 0,
+                    transform.setToTranslation(cam.position.x, cam.position.y, cam.position.z + 100).scale(cam.far,
+                            cam.far, 1.0f));
+        }
+
+        gl.glDepthMask(true);
+        gl.glEnable(GL_CULL_FACE);
+    }
+
+    private void drawSector(VisibleSector sec) {
+        int sectnum = sec.index;
+        gotsector[sectnum >> 3] |= pow2char[sectnum & 7];
+
+        if ((sec.secflags & 1) != 0) {
+            renderingType = RenderingType.Floor.setIndex(sectnum);
+            drawSurf(world.getFloor(sectnum), 0, null, sec.clipPlane);
+        }
+
+        if ((sec.secflags & 2) != 0) {
+            renderingType = RenderingType.Ceiling.setIndex(sectnum);
+            drawSurf(world.getCeiling(sectnum), 0, null, sec.clipPlane);
+        }
+
+        for (int w = 0; w < sec.walls.size; w++) {
+            int flags = sec.wallflags.get(w);
+            int z = sec.walls.get(w);
+            renderingType = RenderingType.Wall.setIndex(z);
+            drawSurf(world.getWall(z, sectnum), flags, null, sec.clipPlane);
+            drawSurf(world.getUpper(z), flags, null, sec.clipPlane);
+            drawSurf(world.getLower(z), flags, null, sec.clipPlane);
+        }
+    }
+
+    public void drawSkySector(VisibleSector sec) {
+        for (int w = 0; w < sec.skywalls.size; w++) {
+            int z = sec.skywalls.get(w);
+            GLSurface ceil = world.getParallaxCeiling(z);
+            if (ceil != null) {
+                drawSky(ceil, ceil.picnum, ceil.getShade(), ceil.getPal(), ceil.getMethod(), identity);
+            }
+
+            GLSurface floor = world.getParallaxFloor(z);
+            if (floor != null) {
+                drawSky(floor, floor.picnum, floor.getShade(), floor.getPal(), floor.getMethod(), identity);
+            }
+        }
+    }
+
+    private void drawSky(GLSurface surf, int picnum, int shade, int palnum, int method, Matrix4 worldTransform) {
+        if (surf.count == 0) {
+            return;
+        }
+
+        if (getTile(picnum).getType() != AnimType.NONE) {
+            picnum += animateoffs(picnum, 0);
+        }
+
+        ArtEntry pic = getTile(picnum);
+        if (!pic.exists()) {
+            method = 1; // invalid data, HOM
+        }
+
+        setgotpic(picnum);
+        if (!engine.getPaletteManager().isValidPalette(palnum)) {
+            palnum = 0;
+        }
+
+        GLTile pth = bindSky(pic, palnum, shade, method);
+        if (pth != null) {
+            Gdx.gl.glDisable(GL_BLEND);
+            if ((method & 3) != 0) {
+                Gdx.gl.glEnable(GL_BLEND);
+            }
+
+            manager.fog(false, 0, 0, 0, 0, 0);
+            manager.transform(worldTransform);
+            manager.frustum(null);
+
+            surf.render(manager.getProgram());
+        }
+    }
+
+    protected void drawSurf(GLSurface surf, int flags, Matrix4 worldTransform, Plane[] clipPlane) {
+        if (surf == null) {
+            return;
+        }
+
+        if (surf.count != 0 && (flags == 0 || (surf.visflag & flags) != 0)) {
+            int picnum = surf.picnum;
+
+            if (getTile(picnum).getType() != AnimType.NONE) {
+                picnum += animateoffs(picnum, 0);
+            }
+
+            ArtEntry pic = getTile(picnum);
+            int method = surf.getMethod();
+            if (!pic.exists()) {
+                method = 1; // invalid data, HOM
+            }
+
+            setgotpic(picnum);
+            GLTile pth = bind(pic, surf.getPal(), surf.getShade(), 0, method);
+            if (pth != null) {
+                int combvis = globalvisibility;
+                int vis = surf.getVisibility();
+                if (vis != 0) {
+                    combvis = mulscale(globalvisibility, (vis + 16) & 0xFF, 4);
+                }
+
+                if (pth.getPixelFormat() == PixelFormat.Pal8) {
+                    ((IndexedShader) manager.getProgram()).setVisibility((int) (-combvis / 64.0f));
+                } else {
+                    calcFog(surf.getPal(), surf.getShade(), combvis);
+                }
+
+                manager.color(1.0f, 1.0f, 1.0f, 1.0f);
+                if (pth.isHighTile()) {
+                    int tsizy = 1;
+                    for (; tsizy < pic.getHeight(); tsizy += tsizy) {
+                        ;
+                    }
+                    if ((pic.getWidth() / (float) pic.getHeight()) != (pth.getWidth() / (float) pth.getHeight())) {
+                        texture_transform.scale(1.0f, (tsizy * pth.getYScale()) / pth.getHeight());
+                    }
+                    manager.textureTransform(texture_transform, 0);
+
+                    if (defs != null && defs.texInfo != null) {
+                        float r = 1, g = 1, b = 1;
+                        if (pth.getPal() != surf.getPal()) {
+                            // apply tinting for replaced textures
+
+                            Color p = defs.texInfo.getTints(surf.getPal());
+                            r *= p.r / 255.0f;
+                            g *= p.g / 255.0f;
+                            b *= p.b / 255.0f;
+                        }
+
+                        Color pdetail = defs.texInfo.getTints(MAXPALOOKUPS - 1);
+                        if (pdetail.r != 255 || pdetail.g != 255 || pdetail.b != 255) {
+                            r *= pdetail.r / 255.0f;
+                            g *= pdetail.g / 255.0f;
+                            b *= pdetail.b / 255.0f;
+                        }
+                        manager.color(r, g, b, 1.0f);
+                    }
+                }
+
+                if (worldTransform == null) {
+                    manager.transform(identity);
+                } else {
+                    manager.transform(worldTransform);
+                }
+
+                if (clipPlane != null && !inpreparemirror) {
+                    manager.frustum(clipPlane);
+                } else {
+                    manager.frustum(null);
+                }
+
+                if ((method & 3) == 0) {
+                    Gdx.gl.glDisable(GL_BLEND);
+                } else {
+                    Gdx.gl.glEnable(GL_BLEND);
+                }
+
+                surf.render(manager.getProgram());
+            }
+        }
+    }
+
+    protected void calcFog(int pal, int shade, float combvis) {
+        float start = FULLVIS_BEGIN;
+        float end = FULLVIS_END;
+        PaletteManager paletteManager = engine.getPaletteManager();
+        if (combvis != 0) {
+            if (shade >= paletteManager.getShadeCount() - 1) {
+                start = -1;
+                end = 0.001f;
+            } else {
+                start = (shade > 0) ? 0 : -(FOGDISTCONST * shade) / combvis;
+                end = (FOGDISTCONST * (paletteManager.getShadeCount() - 1 - shade)) / combvis;
+            }
+        }
+
+        Color palookupfog = paletteManager.getFogColor(pal);
+        float r = (palookupfog.r / 63.f);
+        float g = (palookupfog.g / 63.f);
+        float b = (palookupfog.b / 63.f);
+
+        manager.fog(true, start, end, r, g, b);
+    }
+
+    @Override
+    public void clearview(int dacol) {
+        PaletteManager paletteManager = engine.getPaletteManager();
+        Palette curpalette = paletteManager.getCurrentPalette();
+        gl.glClearColor(curpalette.getRed(dacol) / 255.0f, //
+                curpalette.getGreen(dacol) / 255.0f, //
+                curpalette.getBlue(dacol) / 255.0f, 0); //
+        gl.glClear(GL_COLOR_BUFFER_BIT);
+    }
+
+    @Override
+    public void changepalette(byte[] palette) {
+        super.changepalette(palette);
+        textureCache.changePalette(palette);
+        textureCache.invalidateall();
+        clearskins(true);
+        DEFAULT_SCREEN_FADE.set(0, 0, 0, 0);
+    }
+
+    @Override
+    public void nextpage() {
+        super.nextpage();
+        clearStatus = false;
+        if (world != null) {
+            world.nextpage();
+        }
+        orphoRen.nextpage();
+        manager.reset();
+        textureCache.unbind();
+
+        omdtims = mdtims;
+        mdtims = engine.getCurrentTimeMillis();
+
+        if (boardService.getBoard() != null) {
+            for (int i = 0; i < boardService.getSpriteCount(); i++) {
+                if (mdpause != 0) {
+                    SpriteAnim sprext = defs.mdInfo.getAnimParams(i);
+                    if (sprext == null) {
+                        continue;
+                    }
+
+                    boolean isAnimationDisabled = false;
+                    Spriteext inf = defs.mapInfo.getSpriteInfo(i);
+                    if (inf != null) {
+                        isAnimationDisabled = inf.isAnimationDisabled();
+                    }
+
+                    if ((mdpause != 0 && sprext.mdanimtims != 0) || isAnimationDisabled) {
+                        sprext.mdanimtims += mdtims - omdtims;
+                    }
+                }
+            }
+        }
+
+        beforedrawrooms = 1;
 
 //		if (shape != null)
 //			shape.end();
-	}
-
-	@Override
-	public void setview(int x1, int y1, int x2, int y2) {
-		orphoRen.resize(x2, y2);
-	}
-
-	@Override
-	public void rotatesprite(int sx, int sy, int z, int a, int picnum, int dashade, int dapalnum, int dastat, int cx1,
-			int cy1, int cx2, int cy2) {
-		rendering = Rendering.Tile.setIndex(picnum);
-		set2dview();
-		orphoRen.rotatesprite(sx, sy, z, a, picnum, dashade, dapalnum, dastat, cx1, cy1, cx2, cy2);
-	}
-
-	@Override
-	public void drawmapview(int dax, int day, int zoome, int ang) {
-		set2dview();
-		orphoRen.drawmapview(dax, day, zoome, ang);
-	}
-
-	@Override
-	public void drawoverheadmap(int cposx, int cposy, int czoom, short cang) {
-		set2dview();
-		orphoRen.drawoverheadmap(cposx, cposy, czoom, cang);
-	}
-
-	@Override
-	public void printext(TileFont font, int xpos, int ypos, char[] text, int col, int shade, Transparent bit,
-			float scale) {
-		rendering = Rendering.Tile.setIndex(0);
-		set2dview();
-		orphoRen.printext(font, xpos, ypos, text, col, shade, bit, scale);
-	}
-
-	@Override
-	public void printext(int xpos, int ypos, int col, int backcol, char[] text, int fontsize, float scale) {
-		rendering = Rendering.Tile.setIndex(0);
-		set2dview();
-		orphoRen.printext(xpos, ypos, col, backcol, text, fontsize, scale);
-	}
-
-	@Override
-	public ByteBuffer getFrame(PixelFormat format, int xsiz, int ysiz) {
-		if (pix32buffer != null)
-			pix32buffer.clear();
-
-		boolean reverse = false;
-		if (ysiz < 0) {
-			ysiz *= -1;
-			reverse = true;
-		}
-
-		int byteperpixel = 3;
-		int fmt = GL_RGB;
-		if (BuildGdx.app.getPlatform() == Platform.Android) {
-			byteperpixel = 4;
-			fmt = GL_RGBA;
-		}
-
-		if (pix32buffer == null || pix32buffer.capacity() < xsiz * ysiz * byteperpixel)
-			pix32buffer = BufferUtils.newByteBuffer(xsiz * ysiz * byteperpixel);
-		gl.glPixelStorei(GL_PACK_ALIGNMENT, 1);
-		gl.glReadPixels(0, ydim - ysiz, xsiz, ysiz, fmt, GL_UNSIGNED_BYTE, pix32buffer);
-
-		if (format == PixelFormat.Rgb) {
-			if (reverse) {
-				int b1, b2 = 0;
-				for (int p, x, y = 0; y < ysiz / 2; y++) {
-					b1 = byteperpixel * (ysiz - y - 1) * xsiz;
-					for (x = 0; x < xsiz; x++) {
-						for (p = 0; p < byteperpixel; p++) {
-							byte tmp = pix32buffer.get(b1 + p);
-							pix32buffer.put(b1 + p, pix32buffer.get(b2 + p));
-							pix32buffer.put(b2 + p, tmp);
-						}
-						b1 += byteperpixel;
-						b2 += byteperpixel;
-					}
-				}
-			}
-			pix32buffer.rewind();
-			return pix32buffer;
-		} else if (format == PixelFormat.Pal8) {
-			if (pix8buffer != null)
-				pix8buffer.clear();
-			if (pix8buffer == null || pix8buffer.capacity() < xsiz * ysiz)
-				pix8buffer = BufferUtils.newByteBuffer(xsiz * ysiz);
-
-			int base = 0, r, g, b;
-			if (reverse) {
-				for (int x, y = 0; y < ysiz; y++) {
-					base = byteperpixel * (ysiz - y - 1) * xsiz;
-					for (x = 0; x < xsiz; x++) {
-						r = (pix32buffer.get(base++) & 0xFF) >> 2;
-						g = (pix32buffer.get(base++) & 0xFF) >> 2;
-						b = (pix32buffer.get(base++) & 0xFF) >> 2;
-						pix8buffer.put(engine.getclosestcol(palette, r, g, b));
-					}
-				}
-			} else {
-				for (int i = 0; i < pix8buffer.capacity(); i++) {
-					r = (pix32buffer.get(base++) & 0xFF) >> 2;
-					g = (pix32buffer.get(base++) & 0xFF) >> 2;
-					b = (pix32buffer.get(base++) & 0xFF) >> 2;
-					if (byteperpixel == 4)
-						base++; // Android
-					pix8buffer.put(engine.getclosestcol(palette, r, g, b));
-				}
-			}
-
-			pix8buffer.rewind();
-			return pix8buffer;
-		}
-
-		return null;
-	}
-
-	@Override
-	public byte[] screencapture(int newwidth, int newheight) {
-		byte[] capture = new byte[newwidth * newheight];
-
-		int xf = divscale(xdim, newwidth, 16);
-		int yf = divscale(ydim, newheight, 16);
-
-		ByteBuffer frame = getFrame(PixelFormat.Rgb, xdim, -ydim);
-
-		int byteperpixel = 3;
-		if (BuildGdx.app.getType() == ApplicationType.Android)
-			byteperpixel = 4;
-
-		int base;
-		for (int fx, fy = 0; fy < newheight; fy++) {
-			base = mulscale(fy, yf, 16) * xdim;
-			for (fx = 0; fx < newwidth; fx++) {
-				int pos = base + mulscale(fx, xf, 16);
-				frame.position(byteperpixel * pos);
-				int r = (frame.get() & 0xFF) >> 2;
-				int g = (frame.get() & 0xFF) >> 2;
-				int b = (frame.get() & 0xFF) >> 2;
-
-				capture[newheight * fx + fy] = engine.getclosestcol(palette, r, g, b);
-			}
-		}
-
-		return capture;
-	}
-
-	@Override
-	public void drawline256(int x1, int y1, int x2, int y2, int col) {
-		set2dview();
-		orphoRen.drawline256(x1, y1, x2, y2, col);
-	}
-
-	@Override
-	public void settiltang(int tilt) {
-		if (tilt == 0)
-			gtang = 0.0f;
-		else
-			gtang = (float) Gameutils.AngleToDegrees(tilt);
-	}
-
-	@Override
-	public void setDefs(DefScript defs) {
-		this.textureCache.setTextureInfo(defs != null ? defs.texInfo : null);
-		this.modelManager.setModelsInfo(defs != null ? defs.mdInfo : null);
-		if (this.defs != null)
-			gltexinvalidateall(GLInvalidateFlag.Uninit, GLInvalidateFlag.All);
-		this.defs = defs;
-	}
-
-	@Override
-	public TextureManager getTextureManager() {
-		if (textureCache == null)
-			textureCache = new TextureManager(engine, ExpandTexture.Vertical);
-		return textureCache;
-	}
-
-	@Override
-	public void enableIndexedShader(boolean enable) {
-		if (isUseIndexedTextures != enable) {
-			if (isInited)
-				texturesUninit();
-
-			clearskins(false);
-			this.isUseIndexedTextures = enable;
-		}
-	}
-
-	public void clearskins(boolean bit8only) {
-		for (int i = MAXTILES - 1; i >= 0; i--) {
-			modelManager.clearSkins(i, bit8only);
-		}
-	}
-
-	@Override
-	public void palfade(HashMap<String, FadeEffect> fades) { // TODO: to shader?
-		if (orphoRen.isDrawing())
-			orphoRen.end();
-
-		gl.glDisable(GL_DEPTH_TEST);
-		gl.glDisable(GL_TEXTURE_2D);
-
-		gl.glEnable(GL_BLEND);
-
-		set2dview();
-
-		FadeShader shader = (FadeShader) manager.bind(Shader.FadeShader);
-
-		palfadergb.draw(shader);
-		if (fades != null) {
-			Iterator<FadeEffect> it = fades.values().iterator();
-			while (it.hasNext()) {
-				FadeEffect obj = it.next();
-				obj.draw(shader);
-			}
-		}
-
-		gl.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	}
-
-	@Override
-	public void preload(GLPreloadFlag... flags) {
-		System.err.println("Preload");
-
-		for (int f = 0; f < flags.length; f++) {
-			switch (flags[f]) {
-			case Models:
-				for (int i = MAXTILES - 1; i >= 0; i--) {
-					int pal = 0;
-					modelManager.preload(i, pal, false);
-				}
-				break;
-			case Other:
-				if (world != null)
-					world.dispose();
-				world = new WorldMesh(engine);
-				scanner.init();
-
-				for (int i = 0; i < MAXSPRITES; i++) {
-					removeSpriteCorr(i);
-					SPRITE spr = sprite[i];
-					if (spr == null || ((spr.cstat >> 4) & 3) != 1 || spr.statnum == MAXSTATUS)
-						continue;
-
-					addSpriteCorr(i);
-				}
-				break;
-			}
-		}
-	}
-
-	@Override
-	public void precache(int dapicnum, int dapalnum, int datype) {
-		if ((palookup[dapalnum] == null) && (dapalnum < (MAXPALOOKUPS - RESERVEDPALS)))
-			return;
-
-		textureCache.precache(getTexFormat(), dapicnum, dapalnum, datype);
-
-		if (datype == 0)
-			return;
-
-		modelManager.preload(dapicnum, dapalnum, true);
-	}
-
-	@Override
-	public void gltexapplyprops() {
-		GLFilter filter = GLSettings.textureFilter.get();
-		textureCache.setFilter(filter);
-		int anisotropy = GLSettings.textureAnisotropy.get();
-		for (int i = MAXTILES - 1; i >= 0; i--) {
-			skycache.setFilter(i, filter, anisotropy);
-		}
-
-		modelManager.setTextureFilter(filter, GLSettings.textureAnisotropy.get());
-	}
-
-	@Override
-	public void gltexinvalidateall(GLInvalidateFlag... flags) {
-		if (flags.length == 0) {
-			textureCache.invalidateall();
-			clearskins(true);
-			return;
-		}
-
-		for (int i = 0; i < flags.length; i++) {
-			switch (flags[i]) {
-			case Uninit:
-				texturesUninit();
-				break;
-			case SkinsOnly:
-				clearskins(true);
-				break;
-			case TexturesOnly:
-			case IndexedTexturesOnly:
-			case All:
-					textureCache.invalidateall();
-				break;
-			case Palookup:
-				for (int j = 0; j < MAXPALOOKUPS; j++) {
-					textureCache.invalidatepalookup(j);
-				}
-				break;
-			}
-		}
-	}
-
-	//
-	// invalidatetile
-	// pal: pass -1 to invalidate all palettes for the tile, or >=0 for a particular
-	// palette
-	// how: pass -1 to invalidate all instances of the tile in texture memory, or a
-	// bitfield
-	// bit 0: opaque or masked (non-translucent) texture, using repeating
-	// bit 1: ignored
-	// bit 2: ignored (33% translucence, using repeating)
-	// bit 3: ignored (67% translucence, using repeating)
-	// bit 4: opaque or masked (non-translucent) texture, using clamping
-	// bit 5: ignored
-	// bit 6: ignored (33% translucence, using clamping)
-	// bit 7: ignored (67% translucence, using clamping)
-	// clamping is for sprites, repeating is for walls
-	//
-
-	@Override
-	public void invalidatetile(int tilenume, int pal, int how) { // jfBuild
-		int numpal, firstpal, np;
-		int hp;
-
-		PixelFormat fmt = textureCache.getFmt(tilenume);
-		if (fmt == null)
-			return;
-
-		if (fmt == PixelFormat.Pal8) {
-			numpal = 1;
-			firstpal = 0;
-		} else {
-			if (pal < 0) {
-				numpal = MAXPALOOKUPS;
-				firstpal = 0;
-			} else {
-				numpal = 1;
-				firstpal = pal % MAXPALOOKUPS;
-			}
-		}
-
-		for (hp = 0; hp < 8; hp += 4) {
-			if ((how & pow2long[hp]) == 0)
-				continue;
-
-			for (np = firstpal; np < firstpal + numpal; np++) {
-				textureCache.invalidate(tilenume, np, textureCache.clampingMode(hp));
-			}
-		}
-	}
-
-	@Override
-	public void setdrunk(float intensive) {
-		if (intensive == 0) {
-			drunk = false;
-			drunkIntensive = 0;
-		} else {
-			drunk = true;
-			drunkIntensive = intensive;
-		}
-	}
-
-	@Override
-	public float getdrunk() {
-		return drunkIntensive;
-	}
-
-	protected GLTile bind(int dapicnum, int dapalnum, int dashade, int skybox, int method) {
-		if (palookup[dapalnum] == null)
-			dapalnum = 0;
-
-		GLTile pth = textureCache.get(getTexFormat(), dapicnum, dapalnum, skybox, method);
-		if (pth == null)
-			return null;
-
-		textureCache.bind(pth);
-		if (manager.getShader() == null || isSkyShader() || pth.getPixelFormat() != manager.getPixelFormat()) {
-			switchShader(pth.getPixelFormat() != PixelFormat.Pal8 ? Shader.RGBWorldShader : Shader.IndexedWorldShader);
-		}
-		setTextureParameters(pth, dapicnum, dapalnum, dashade, skybox, method);
-
-		return pth;
-	}
-
-	protected GLTile bindSky(int dapicnum, int dapalnum, int dashade, int method) {
-		if (palookup[dapalnum] == null)
-			dapalnum = 0;
-
-		GLTile pth = getSkyTexture(getTexFormat(), dapicnum, dapalnum);
-		if (pth == null)
-			return null;
-
-		textureCache.bind(pth);
-		if (manager.getShader() == null || !isSkyShader() || pth.getPixelFormat() != manager.getPixelFormat()) {
-			switchShader(pth.getPixelFormat() != PixelFormat.Pal8 ? Shader.RGBSkyShader : Shader.IndexedSkyShader);
-		}
-		setTextureParameters(pth, dapicnum, dapalnum, dashade, 0, 0);
-		return pth;
-	}
-
-	public void setTextureParameters(GLTile tile, int tilenum, int pal, int shade, int skybox, int method) {
-		float alpha = 1.0f;
-		switch (method & 3) {
-		case 2:
-			alpha = TRANSLUSCENT1;
-			break;
-		case 3:
-			alpha = TRANSLUSCENT2;
-			break;
-		}
-
-		if (tilenum != -1 && !engine.getTile(tilenum).isLoaded())
-			alpha = 0.01f; // Hack to update Z-buffer for invalid mirror textures
-
-		if (tile.getPixelFormat() == TileData.PixelFormat.Pal8) {
-			manager.textureTransform(texture_transform.idt(), 0);
-			manager.textureParams8(pal, shade, alpha, (method & 3) == 0 || !textureCache.alphaMode(method));
-		} else {
-			texture_transform.idt();
-			if (tile.isHighTile() && ((tile.getHiresXScale() != 1.0f) || (tile.getHiresYScale() != 1.0f))
-					&& Rendering.Skybox.getIndex() == 0) {
-				texture_transform.scale(tile.getHiresXScale(), tile.getHiresYScale());
-			}
-			manager.textureTransform(texture_transform, 0);
-
-			if (GLInfo.multisample != 0 && GLSettings.useHighTile.get() && Rendering.Skybox.getIndex() == 0) {
+
+        gl.glFlush();
+    }
+
+    @Override
+    public void setview(int x1, int y1, int x2, int y2) {
+        xdimen = (x2 - x1) + 1;
+        ydimen = (y2 - y1) + 1;
+
+        super.setview(x1, y1, x2, y2);
+
+        orphoRen.resize(x2, y2);
+    }
+
+    @Override
+    public void setviewtotile(DynamicArtEntry pic) { // jfBuild}
+        // DRAWROOMS TO TILE BACKUP&SET CODE
+        bakwindowx1[setviewcnt] = windowx1;
+        bakwindowy1[setviewcnt] = windowy1;
+        bakwindowx2[setviewcnt] = windowx2;
+        bakwindowy2[setviewcnt] = windowy2;
+
+        if (setviewcnt == 0) {
+            baktile = pic;
+        }
+
+        offscreenrendering = true;
+
+        setviewcnt++;
+        setview(0, 0, pic.getHeight() - 1, pic.getWidth() - 1);
+    }
+
+    @Override
+    public void setviewback() {// jfBuild
+        if (setviewcnt <= 0) {
+            offscreenrendering = false;
+            setaspect();
+            return;
+        }
+
+        setviewcnt--;
+        offscreenrendering = (setviewcnt > 0);
+        if (setviewcnt == 0) {
+            if (baktile.exists()) {
+                baktile.copyData(setviewbuf());
+            }
+        }
+
+        setview(bakwindowx1[setviewcnt], bakwindowy1[setviewcnt], bakwindowx2[setviewcnt], bakwindowy2[setviewcnt]);
+    }
+
+    protected byte[] setviewbuf() { // gdxBuild
+        int width = baktile.getWidth();
+        int heigth = baktile.getHeight();
+        byte[] data = baktile.getBytes();
+
+        ByteBuffer frame = getFrame(TileData.PixelFormat.Pal8, width, heigth);
+
+        int dptr;
+        int sptr = 0;
+        for (int i = width - 1, j; i >= 0; i--) {
+            dptr = i;
+            for (j = 0; j < heigth; j++) {
+                data[dptr] = frame.get(sptr++);
+                dptr += width;
+            }
+        }
+
+        return data;
+    }
+
+    @Override
+    public void setFieldOfView(int fov) {
+        this.fovFactor = (float) Math.tan(fov * Math.PI / 360.0);
+        setaspect();
+    }
+
+    protected void setaspect(int daxrange, int daaspect) {
+        viewingrange = offscreenrendering ? daxrange : (int) (daxrange * fovFactor);
+
+        yxaspect = daaspect;
+        xyaspect = divscale(1, yxaspect, 32);
+        xdimenscale = scale(xdimen, yxaspect, 320);
+        xdimscale = scale(320, xyaspect, xdimen);
+
+        int w = 320;
+        if ((4 * xdim / 5) == ydim) {
+            w = 300;
+        }
+        float k = daxrange / (float) divscale(xdim * 240L, (long) ydim * w, 16);
+        float fov = offscreenrendering ? 110 : (float) Math.toDegrees(2 * Math.atan(k * fovFactor));
+        cam.setFieldOfView(fov);
+    }
+
+    @Override
+    public void setaspect() {
+        if (offscreenrendering) {
+            setaspect(65536, 65536);
+            return;
+        }
+
+        if (config.getWidescreen() == 1 && (4 * xdim / 5) != ydim) {
+            // the correction factor 100/107 has been found
+            // out experimentally. squares ftw!
+            int yx = (65536 * 4 * 100) / (3 * 107);
+            int vr = divscale(xdim * 3L, ydim * 4L, 16);
+
+            setaspect(vr, yx);
+        } else {
+            setaspect(65536, divscale(ydim * 320L, xdim * 200L, 16));
+        }
+    }
+
+    @Override
+    public void rotatesprite(int sx, int sy, int z, int a, int picnum, int dashade, int dapalnum, int dastat, int cx1,
+                             int cy1, int cx2, int cy2) {
+        renderingType = RenderingType.Tile.setIndex(picnum);
+        set2dview();
+        orphoRen.rotatesprite(sx, sy, z, a, picnum, dashade, dapalnum, dastat, cx1, cy1, cx2, cy2);
+    }
+
+    @Override
+    public void drawmapview(int dax, int day, int zoome, int ang) {
+        set2dview();
+        Arrays.fill(gotsector, (byte) 0);
+        orphoRen.drawmapview(dax, day, zoome, ang);
+    }
+
+    @Override
+    public void drawoverheadmap(int cposx, int cposy, int czoom, short cang) {
+        set2dview();
+        orphoRen.drawoverheadmap(boardService, cposx, cposy, czoom, cang);
+    }
+
+    @Override
+    public int printext(Font font, int x, int y, char[] text, float scale, int shade, int palnum, TextAlign align, Transparent transparent, boolean shadow) {
+        renderingType = RenderingType.Tile.setIndex(0);
+        set2dview();
+        return orphoRen.printext(font, x, y, text, scale, shade, palnum, align, transparent, shadow);
+    }
+
+    @Override
+    public ByteBuffer getFrame(PixelFormat format, int xsiz, int ysiz) {
+        boolean reverse = false;
+        if (ysiz < 0) {
+            ysiz *= -1;
+            reverse = true;
+        }
+
+        int byteperpixel = 3;
+        int fmt = GL_RGB;
+        if (Gdx.app.getType() == ApplicationType.Android) {
+            byteperpixel = 4;
+            fmt = GL_RGBA;
+        }
+        ByteBuffer frameBuffer = ByteBuffer.allocateDirect(xsiz * ysiz * byteperpixel);
+
+        gl.glPixelStorei(GL_PACK_ALIGNMENT, 1);
+        gl.glReadPixels(0, ydim - ysiz, xsiz, ysiz, fmt, GL_UNSIGNED_BYTE, frameBuffer);
+
+        if (format == PixelFormat.Rgb) {
+            if (reverse) {
+                int b1, b2 = 0;
+                for (int p, x, y = 0; y < ysiz / 2; y++) {
+                    b1 = byteperpixel * (ysiz - y - 1) * xsiz;
+                    for (x = 0; x < xsiz; x++) {
+                        for (p = 0; p < byteperpixel; p++) {
+                            byte tmp = frameBuffer.get(b1 + p);
+                            frameBuffer.put(b1 + p, frameBuffer.get(b2 + p));
+                            frameBuffer.put(b2 + p, tmp);
+                        }
+                        b1 += byteperpixel;
+                        b2 += byteperpixel;
+                    }
+                }
+            }
+            frameBuffer.rewind();
+            return frameBuffer;
+        }
+
+        ByteBuffer pix8Buffer = ByteBuffer.allocateDirect(xsiz * ysiz);
+
+        PaletteManager paletteManager = engine.getPaletteManager();
+        byte[] basePalette = paletteManager.getBasePalette();
+        FastColorLookup fastColorLookup = paletteManager.getFastColorLookup();
+
+        int base = 0, r, g, b;
+        if (reverse) {
+            for (int x, y = 0; y < ysiz; y++) {
+                base = byteperpixel * (ysiz - y - 1) * xsiz;
+                for (x = 0; x < xsiz; x++) {
+                    r = (frameBuffer.get(base++) & 0xFF) >> 2;
+                    g = (frameBuffer.get(base++) & 0xFF) >> 2;
+                    b = (frameBuffer.get(base++) & 0xFF) >> 2;
+                    pix8Buffer.put(fastColorLookup.getClosestColorIndex(basePalette, r, g, b));
+                }
+            }
+        } else {
+            for (int i = 0; i < pix8Buffer.capacity(); i++) {
+                r = (frameBuffer.get(base++) & 0xFF) >> 2;
+                g = (frameBuffer.get(base++) & 0xFF) >> 2;
+                b = (frameBuffer.get(base++) & 0xFF) >> 2;
+                if (byteperpixel == 4) {
+                    base++; // Android
+                }
+                pix8Buffer.put(fastColorLookup.getClosestColorIndex(basePalette, r, g, b));
+            }
+        }
+
+        pix8Buffer.rewind();
+        return pix8Buffer;
+    }
+
+    @Override
+    public void drawline256(int x1, int y1, int x2, int y2, int col) {
+        set2dview();
+        orphoRen.drawline256(x1, y1, x2, y2, col);
+    }
+
+    @Override
+    public void settiltang(int tilt) {
+        if (tilt == 0) {
+            gtang = 0.0f;
+        } else {
+            gtang = (float) Gameutils.AngleToDegrees(tilt);
+        }
+    }
+
+    @Override
+    public void setDefs(DefScript defs) {
+        this.textureCache.setTextureInfo(defs != null ? defs.texInfo : null);
+        this.modelManager.setModelsInfo(defs != null ? defs.mdInfo : null);
+        if (this.defs != null) {
+            texturesUninit();
+            textureCache.invalidateall();
+            clearskins(false);
+        }
+        this.defs = defs;
+    }
+
+    @Override
+    public void showScreenFade(ScreenFade screenFade) {
+        int count = screenFade.getIntensive();
+        int r = screenFade.getRed();
+        int g = screenFade.getGreen();
+        int b = screenFade.getBlue();
+
+        int fr = 0, fg = 0, fb = 0;
+        if (r > 0) {
+            fr = Math.min(count - 128, r / 2);
+        }
+        if (g > 0) {
+            fg = Math.min(count - 128, g / 2);
+        }
+        if (b > 0) {
+            fb = Math.min(count - 128, b / 2);
+        }
+
+        if (orphoRen.isDrawing()) {
+            orphoRen.flush(); // #GDX 30.07.2024 was end()
+        }
+
+        gl.glDisable(GL_DEPTH_TEST);
+        gl.glDisable(GL_TEXTURE_2D);
+
+        gl.glEnable(GL_BLEND);
+
+        set2dview();
+
+        FadeShader shader = (FadeShader) manager.bind(Shader.FadeShader);
+        gl.glBlendFunc(GL_ONE_MINUS_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        shader.setColor(min(63, fr) << 2, min(63, fg) << 2, min(63, fb) << 2, (1 << 2));
+        fadeMesh.render(shader, GL_TRIANGLES);
+
+        gl.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    }
+
+    public TextureManager getTextureManager() {
+        if (textureCache == null) {
+            textureCache = new TextureManager(engine, ExpandTexture.Vertical);
+        }
+        return textureCache;
+    }
+
+    public void enableIndexedShader(boolean enable) {
+        if (isUseIndexedTextures != enable) {
+            if (isInited) {
+                texturesUninit();
+            }
+
+            clearskins(false);
+            this.isUseIndexedTextures = enable;
+        }
+    }
+
+    public void clearskins(boolean bit8only) {
+        for (int i = MAXTILES - 1; i >= 0; i--) {
+            modelManager.clearSkins(i, bit8only);
+        }
+    }
+
+    @Override
+    public void loadModels() {
+        for (int i = MAXTILES - 1; i >= 0; i--) {
+            int pal = 0;
+            modelManager.preload(i, pal, false);
+        }
+    }
+
+    @Override
+    public void onPrecacheTile(int dapicnum, boolean ifSprite) {
+        int dapalnum = 0;
+        int datype = ifSprite ? 4 : 0;
+        if ((!engine.getPaletteManager().isValidPalette(dapalnum)) && (dapalnum < (MAXPALOOKUPS - RESERVEDPALS))) {
+            return;
+        }
+
+        textureCache.precache(getTexFormat(), getTile(dapicnum), dapalnum, datype);
+
+        if (datype == 0) {
+            return;
+        }
+
+        modelManager.preload(dapicnum, dapalnum, true);
+    }
+
+    public void gltexapplyprops() {
+        TexFilter filter = config.getGlfilter();
+        textureCache.setFilter(filter);
+        for (int i = MAXTILES - 1; i >= 0; i--) {
+            skycache.setFilter(i, filter);
+        }
+
+        modelManager.setTextureFilter(filter);
+    }
+
+    public void invalidatetile(int tilenume, int pal, int how) { // jfBuild
+        int numpal, firstpal, np;
+        int hp;
+
+        PixelFormat fmt = textureCache.getFmt(tilenume);
+        if (fmt == null) {
+            return;
+        }
+
+        if (fmt == PixelFormat.Pal8) {
+            numpal = 1;
+            firstpal = 0;
+        } else {
+            if (pal < 0) {
+                numpal = MAXPALOOKUPS;
+                firstpal = 0;
+            } else {
+                numpal = 1;
+                firstpal = pal % MAXPALOOKUPS;
+            }
+        }
+
+        for (hp = 0; hp < 8; hp += 4) {
+            if ((how & pow2long[hp]) == 0) {
+                continue;
+            }
+
+            for (np = firstpal; np < firstpal + numpal; np++) {
+                textureCache.invalidate(tilenume, np, textureCache.clampingMode(hp));
+            }
+        }
+    }
+
+    protected GLTile bind(ArtEntry tile, int dapalnum, int dashade, int skybox, int method) {
+        if (!engine.getPaletteManager().isValidPalette(dapalnum)) {
+            dapalnum = 0;
+        }
+
+        GLTile pth = textureCache.get(getTexFormat(), tile, dapalnum, skybox, method);
+        if (pth == null) {
+            return null;
+        }
+
+        textureCache.bind(pth);
+        if (manager.getShader() == null || isSkyShader() || pth.getPixelFormat() != manager.getPixelFormat()) {
+            switchShader(pth.getPixelFormat() != PixelFormat.Pal8 ? Shader.RGBWorldShader : Shader.IndexedWorldShader);
+        }
+        setTextureParameters(pth, tile, dapalnum, dashade, skybox, method);
+
+        return pth;
+    }
+
+    protected GLTile bindSky(ArtEntry tile, int dapalnum, int dashade, int method) {
+        if (!engine.getPaletteManager().isValidPalette(dapalnum)) {
+            dapalnum = 0;
+        }
+
+        GLTile pth = getSkyTexture(getTexFormat(), tile, dapalnum);
+        if (pth == null) {
+            return null;
+        }
+
+        textureCache.bind(pth);
+        if (manager.getShader() == null || !isSkyShader() || pth.getPixelFormat() != manager.getPixelFormat()) {
+            switchShader(pth.getPixelFormat() != PixelFormat.Pal8 ? Shader.RGBSkyShader : Shader.IndexedSkyShader);
+        }
+        setTextureParameters(pth, tile, dapalnum, dashade, 0, 0);
+        return pth;
+    }
+
+    public void setTextureParameters(GLTile tile, ArtEntry artEntry, int pal, int shade, int skybox, int method) {
+        float alpha = 1.0f;
+        switch (method & 3) {
+            case 2:
+                alpha = TRANSLUSCENT1;
+                break;
+            case 3:
+                alpha = TRANSLUSCENT2;
+                break;
+        }
+
+        if (!artEntry.exists()) {
+            alpha = 0.01f; // Hack to update Z-buffer for invalid mirror textures
+        }
+
+        if (tile.getPixelFormat() == TileData.PixelFormat.Pal8) {
+            manager.textureTransform(texture_transform.idt(), 0);
+            manager.textureParams8(pal, shade, alpha, (method & 3) == 0 || !textureCache.alphaMode(method));
+        } else {
+            texture_transform.idt();
+            if (tile.isHighTile() && ((tile.getHiresXScale() != 1.0f) || (tile.getHiresYScale() != 1.0f))
+                    && RenderingType.Skybox.getIndex() == 0) {
+                texture_transform.scale(tile.getHiresXScale(), tile.getHiresYScale());
+            }
+            manager.textureTransform(texture_transform, 0);
+
+            if (GLInfo.multisample != 0 && config.isUseHighTiles() && RenderingType.Skybox.getIndex() == 0) {
 //				if (Console.Geti("r_detailmapping") != 0) {
 //					GLTile detail = textureCache.get(tile.getPixelFormat(), tilenum, DETAILPAL, 0, method);
 //					if (detail != null) {
@@ -1266,193 +1308,242 @@ public class GDXRenderer implements GLRenderer {
 //						//setupTextureGlow(glow); XXX
 //					}
 //				}
-			}
+            }
 
-			float r, b, g;
-			float fshade = min(max(shade * 1.04f, 0), numshades);
-			r = g = b = (numshades - fshade) / numshades;
+            float r, b, g;
+            int numshades = engine.getPaletteManager().getShadeCount();
+            float fshade = min(max(shade * 1.04f, 0), numshades);
+            r = g = b = (numshades - fshade) / numshades;
 
-			if (defs != null && tile.isHighTile() && defs.texInfo != null) {
-				if (tile.getPal() != pal) {
-					// apply tinting for replaced textures
+            if (defs != null && tile.isHighTile() && defs.texInfo != null) {
+                if (tile.getPal() != pal) {
+                    // apply tinting for replaced textures
 
-					Palette p = defs.texInfo.getTints(pal);
-					r *= p.r / 255.0f;
-					g *= p.g / 255.0f;
-					b *= p.b / 255.0f;
-				}
+                    Color p = defs.texInfo.getTints(pal);
+                    r *= p.r / 255.0f;
+                    g *= p.g / 255.0f;
+                    b *= p.b / 255.0f;
+                }
 
-				Palette pdetail = defs.texInfo.getTints(MAXPALOOKUPS - 1);
-				if (pdetail.r != 255 || pdetail.g != 255 || pdetail.b != 255) {
-					r *= pdetail.r / 255.0f;
-					g *= pdetail.g / 255.0f;
-					b *= pdetail.b / 255.0f;
-				}
-			}
+                Color pdetail = defs.texInfo.getTints(MAXPALOOKUPS - 1);
+                if (pdetail.r != 255 || pdetail.g != 255 || pdetail.b != 255) {
+                    r *= pdetail.r / 255.0f;
+                    g *= pdetail.g / 255.0f;
+                    b *= pdetail.b / 255.0f;
+                }
+            }
 
-			manager.color(r, g, b, alpha);
-		}
-	}
+            manager.color(r, g, b, alpha);
+        }
+    }
 
-	public void setFieldOfView(final float fov) {
-		if (cam != null) {
-			cam.setFieldOfView(fov);
-		} else {
-			BuildGdx.app.postRunnable(new Runnable() {
-				@Override
-				public void run() {
-					cam.setFieldOfView(fov);
-				}
-			});
-		}
-	}
+    public void addSpriteCorr(int snum) {
+        // TODO Auto-generated method stub
+    }
 
-	@Override
-	public void addSpriteCorr(int snum) {
-		// TODO Auto-generated method stub
+    public void removeSpriteCorr(int snum) {
+        // TODO Auto-generated method stub
+    }
 
-	}
+    @Override
+    public void completemirror() {
+        inpreparemirror = false;
+    }
 
-	@Override
-	public void removeSpriteCorr(int snum) {
-		// TODO Auto-generated method stub
+    private boolean spritewallfront(Sprite s, int w) {
+        if (s == null) {
+            return false;
+        }
 
-	}
+        Wall wal = boardService.getWall(w);
+        int x1 = wal.getX();
+        int y1 = wal.getY();
+        wal = boardService.getWall(wal.getPoint2());
+        return (dmulscale(wal.getX() - x1, s.getY() - y1, -(s.getX() - x1), wal.getY() - y1, 32) >= 0);
+    }
 
-	@Override
-	public void completemirror() {
-		inpreparemirror = false;
-	}
+    protected void glViewport(float x, float y, float x2, float y2) {
+        x *= backBufferScale;
+        y *= backBufferScale;
+        x2 *= backBufferScale;
+        y2 *= backBufferScale;
+        gl.glViewport((int) x, (int) y, (int) x2, (int) y2);
+    }
 
-	private boolean spritewallfront(SPRITE s, int w) {
-		if (s == null)
-			return false;
+    protected void set2dview() {
+        if (gloy1 != -1) {
+            glViewport(0, 0, xdim, ydim);
+            orphoRen.resize(xdim, ydim);
+        }
+        gloy1 = -1;
+    }
 
-		WALL wal = wall[w];
-		int x1 = wal.x;
-		int y1 = wal.y;
-		wal = wall[wal.point2];
-		return (dmulscale(wal.x - x1, s.y - y1, -(s.x - x1), wal.y - y1, 32) >= 0);
-	}
+    protected void resizeglcheck() {
+        if ((glox1 != windowx1) || (gloy1 != windowy1) || (glox2 != windowx2) || (gloy2 != windowy2)) {
+            glox1 = windowx1;
+            gloy1 = windowy1;
+            glox2 = windowx2;
+            gloy2 = windowy2;
 
-	protected void set2dview() {
-		if (gloy1 != -1) {
-			gl.glViewport(0, 0, xdim, ydim);
-			orphoRen.resize(xdim, ydim);
-		}
-		gloy1 = -1;
-	}
+            glViewport(windowx1, ydim - (windowy2 + 1), windowx2 - windowx1 + 1, windowy2 - windowy1 + 1);
 
-	protected void resizeglcheck() {
-		if ((glox1 != windowx1) || (gloy1 != windowy1) || (glox2 != windowx2) || (gloy2 != windowy2)) {
-			glox1 = windowx1;
-			gloy1 = windowy1;
-			glox2 = windowx2;
-			gloy2 = windowy2;
+            cam.viewportWidth = windowx2;
+            cam.viewportHeight = windowy2;
+        }
+    }
 
-			gl.glViewport(windowx1, ydim - (windowy2 + 1), windowx2 - windowx1 + 1, windowy2 - windowy1 + 1);
+    protected GDXOrtho allocOrphoRenderer(Engine engine) {
+        return new GDXOrtho(this, new DefaultMapSettings(engine.getBoardService()));
+    }
 
-			cam.viewportWidth = windowx2;
-			cam.viewportHeight = windowy2;
-		}
-	}
+    protected int[] getMirrorTextures() {
+        return null;
+    }
 
-	protected GDXOrtho allocOrphoRenderer(IOverheadMapSettings settings) {
-		return new GDXOrtho(this, settings);
-	}
+    @Override
+    public RenderType getType() {
+        return RenderType.PolyGDX;
+    }
 
-	protected int[] getMirrorTextures() {
-		return null;
-	}
+    @Override
+    public PixelFormat getTexFormat() {
+        return isUseIndexedTextures ? PixelFormat.Pal8 : PixelFormat.Rgba;
+    }
 
-	@Override
-	public RenderType getType() {
-		return RenderType.PolyGDX;
-	}
+    @Override
+    public boolean isInited() {
+        return isInited;
+    }
 
-	@Override
-	public PixelFormat getTexFormat() {
-		return isUseIndexedTextures ? PixelFormat.Pal8 : PixelFormat.Rgba;
-	}
+    protected void switchShader(Shader shader) {
+        if (orphoRen.isDrawing()) {
+            orphoRen.flush(); // #GDX 30.07.2024 was end()
+        }
 
-	@Override
-	public boolean isInited() {
-		return isInited;
-	}
+        manager.bind(shader);
+        manager.mirror(inpreparemirror);
+        manager.prepare(cam,
+                (int) (windowx1 * backBufferScale),
+                (int) (windowy1 * backBufferScale),
+                (int) (windowx2 * backBufferScale),
+                (int) (windowy2 * backBufferScale));
+        // TODO: add texture transform here
 
-	protected ShaderProgram switchShader(Shader shader) {
-		ShaderProgram out = manager.bind(shader);
-		manager.mirror(inpreparemirror);
-		manager.prepare(cam);
-		// TODO: add texture transform here
+        if (orphoRen.isDrawing()) {
+            orphoRen.setupMatrices();
+        }
+    }
 
-		return out;
-	}
+    protected GLTile getSkyTexture(PixelFormat fmt, ArtEntry artEntry, int palnum) {
+        if (!artEntry.hasSize()) {
+            return textureCache.get(fmt, artEntry, palnum, 0, 0);
+        }
 
-	protected final GLTileArray skycache = new GLTileArray(MAXTILES);
+        GLTile tile = skycache.get(artEntry.getNum(), palnum, false, 0);
+        if (tile != null /* && tile.getPixelFormat() == fmt */) {
+            if (tile.isInvalidated()) {
+                tile.setInvalidated(false);
 
-	protected GLTile getSkyTexture(PixelFormat fmt, int picnum, int palnum) {
-		if (!engine.getTile(picnum).hasSize())
-			return textureCache.get(getTexFormat(), picnum, palnum, 0, 0);
-
-		GLTile tile = skycache.get(picnum, palnum, false, 0);
-		boolean useMipMaps = GLSettings.textureFilter.get().mipmaps;
-
-		if (tile != null /* && tile.getPixelFormat() == fmt */) {
-			if (tile.isInvalidated()) {
-				tile.setInvalidated(false);
-
-				TileData data = loadPic(fmt, picnum, palnum);
-				tile.update(data, palnum, useMipMaps);
-			}
-		} else {
+                TileData data = loadPic(fmt, artEntry, palnum);
+                tile.update(data, palnum, config.getGlfilter());
+            }
+        } else {
 //			if (tile != null)
 //				skycache.dispose(picnum); // old texture
 
-			TileData data = loadPic(fmt, picnum, palnum);
-			if (data == null)
-				return null;
+            TileData data = loadPic(fmt, artEntry, palnum);
+            if (data == null) {
+                return null;
+            }
 
-			skycache.add(textureCache.newTile(data, fmt == PixelFormat.Pal8 ? 0 : palnum, useMipMaps), picnum);
-		}
+            skycache.add(textureCache.newTile(data, fmt == PixelFormat.Pal8 ? 0 : palnum, config.getGlfilter()), artEntry.getNum());
+        }
 
-		return tile;
-	}
+        return tile;
+    }
 
-	protected TileData loadPic(PixelFormat fmt, int picnum, int palnum) {
-		short[] dapskyoff = zeropskyoff;
-		int dapskybits = pskybits;
+    protected TileData loadPic(PixelFormat fmt, ArtEntry tile, int palnum) {
+        short[] dapskyoff = zeropskyoff;
+        int dapskybits = pskybits;
 
-		if (dapskybits < 0)
-			dapskybits = 0;
+        if (dapskybits < 0) {
+            dapskybits = 0;
+        }
 
-		Tile tile = engine.getTile(picnum);
-		TileAtlas sky = new TileAtlas(fmt, tile.getWidth() * (1 << dapskybits), tile.getHeight(), tile.getWidth(),
-				tile.getHeight(), false);
-		for (int i = 0; i < (1 << dapskybits); i++) {
-			int pic = dapskyoff[i] + picnum;
-			TileData dat;
-			if (fmt == PixelFormat.Pal8)
-				dat = new IndexedTileData(engine.getTile(pic), false, false, 0);
-			else
-				dat = new RGBTileData(engine.getTile(pic), palnum, false, false, 0);
-			sky.addTile(pic, dat);
-		}
+        TileAtlas sky = new TileAtlas(fmt, tile.getWidth() * (1 << dapskybits), tile.getHeight(), tile.getWidth(),
+                tile.getHeight(), false);
 
-		return sky.atlas.get(0);
-	}
+        final int tileNum = tile.getNum();
+        for (int i = 0; i < (1 << dapskybits); i++) {
+            tile = getTile(dapskyoff[i] + tileNum);
 
-	protected boolean isSkyShader() {
-		return manager.getShader() == Shader.RGBSkyShader || manager.getShader() == Shader.IndexedSkyShader;
-	}
+            TileData dat;
+            if (fmt == PixelFormat.Pal8) {
+                dat = new IndexedTileData(tile, false, false, 0);
+            } else {
+                dat = new RGBTileData(engine.getPaletteManager(), tile, palnum, false, false, 0, config.getGlfilter() != TexFilter.NONE);
+            }
+            sky.addTile(tile.getNum(), dat);
+        }
 
-	// Debug 2.5D renderer
+        return sky.atlas.get(0);
+    }
+
+    protected boolean isSkyShader() {
+        return manager.getShader() == Shader.RGBSkyShader || manager.getShader() == Shader.IndexedSkyShader;
+    }
+
+    @Override
+    public void onPalookupChanged(int palnum) {
+        textureCache.invalidatepalookup(palnum);
+    }
+
+    @Override
+    public void onChangePalette(byte[] palette) {
+        changepalette(palette);
+    }
+
+    @Override
+    public void onLoadBoard(Board board) {
+        if (world != null) {
+            world.dispose();
+        }
+        world = new WorldMesh(engine);
+        scanner.init();
+
+        for (int i = 0; i < board.getSpriteCount(); i++) {
+            removeSpriteCorr(i);
+            Sprite spr = board.getSprite(i);
+            if (spr == null || ((spr.getCstat() >> 4) & 3) != 1 || spr.getStatnum() == MAXSTATUS) {
+                continue;
+            }
+
+            addSpriteCorr(i);
+        }
+    }
+
+    @Override
+    public void onAddSprite(int spriteNum) {
+        addSpriteCorr(spriteNum);
+    }
+
+    @Override
+    public void onRemoveSprite(int spriteNum) {
+        removeSpriteCorr(spriteNum);
+    }
+
+    @Override
+    public void onInvalidate(int tileNum) {
+        invalidatetile(tileNum, -1, -1);
+    }
+
+    // Debug 2.5D renderer
 
 //	private boolean WallFacingCheck(WALL wal) {
 //		float x1 = wal.x - globalposx;
 //		float y1 = wal.y - globalposy;
-//		float x2 = wall[wal.point2].x - globalposx;
-//		float y2 = wall[wal.point2].y - globalposy;
+//		float x2 = boardService.getWall(wal.point2).x - globalposx;
+//		float y2 = boardService.getWall(wal.point2).y - globalposy;
 //
 //		return (x1 * y2 - y1 * x2) >= 0;
 //	}
@@ -1472,7 +1563,7 @@ public class GDXRenderer implements GLRenderer {
 //	}
 //
 //	private ArrayList<Vertex> project(BuildCamera cam, int z, int sectnum, Heinum h) {
-//		WALL wal = wall[z];
+//		WALL wal = boardService.getWall(z);
 //		if (!WallFacingCheck(wal))
 //			return null;
 //

@@ -34,8 +34,9 @@ public class Tile2model {
 		out.framenum = framenum;
 		out.smoothduration = smoothduration;
 		out.palette = palette;
-		if (next != null)
+		if (next != null) {
 			out.next = next.clone(disposable);
+		}
 		out.disposable = disposable;
 
 		return out;

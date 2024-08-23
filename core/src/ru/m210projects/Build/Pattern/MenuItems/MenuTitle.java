@@ -16,20 +16,19 @@
 
 package ru.m210projects.Build.Pattern.MenuItems;
 
-import static ru.m210projects.Build.Engine.xdim;
-import static ru.m210projects.Build.Engine.ydim;
-
 import ru.m210projects.Build.Engine;
-import ru.m210projects.Build.Pattern.BuildFont;
-import ru.m210projects.Build.Pattern.BuildFont.TextAlign;
 import ru.m210projects.Build.Pattern.MenuItems.MenuHandler.MenuOpt;
+import ru.m210projects.Build.Types.ConvertType;
+import ru.m210projects.Build.Types.Transparent;
+import ru.m210projects.Build.Types.font.Font;
+import ru.m210projects.Build.Types.font.TextAlign;
 
 public class MenuTitle extends MenuItem {
 	
 	public int nTile;
 	protected Engine draw;
 	
-	public MenuTitle(Engine draw, Object text, BuildFont font, int x, int y, int nTile) {
+	public MenuTitle(Engine draw, Object text, Font font, int x, int y, int nTile) {
 		super(text, font);
 		
 		this.flags = 1;
@@ -45,9 +44,10 @@ public class MenuTitle extends MenuItem {
 	public void draw(MenuHandler handler) {
 		if ( text != null )
 		{
-		    if(nTile != -1)
-		    	draw.rotatesprite(160 << 16, y << 16, 65536, 0, nTile, -128, 0, 78, 0, 0, xdim - 1, ydim - 1);
-		    font.drawText(x, y - font.getHeight() / 2, text, -128, pal, TextAlign.Center, 2, fontShadow);
+		    if(nTile != -1) {
+				handler.game.getRenderer().rotatesprite(160 << 16, y << 16, 65536, 0, nTile, -128, 0, 78);
+			}
+		    font.drawTextScaled(handler.getRenderer(), x, y - font.getSize() / 2, text, 1.0f,-128, pal, TextAlign.Center, Transparent.None, ConvertType.Normal, fontShadow);
 		}
 		handler.mPostDraw(this);
 	}

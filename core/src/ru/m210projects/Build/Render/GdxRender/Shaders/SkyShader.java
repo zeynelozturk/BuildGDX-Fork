@@ -1,9 +1,26 @@
+// This file is part of BuildGDX.
+// Copyright (C) 2023-2024 Alexander Makarov-[M210] (m210-2007@mail.ru)
+//
+// BuildGDX is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// BuildGDX is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with BuildGDX.  If not, see <http://www.gnu.org/licenses/>.
+
 package ru.m210projects.Build.Render.GdxRender.Shaders;
 
 public class SkyShader {
 
-	public static final String vertex = "attribute vec4 a_position;\n" //
-			+ "\n" //
+	public static final String vertex =
+			"#version 110\n" //
+			+ "attribute vec4 a_position;\n" //
 			+ "uniform mat4 u_projTrans;\n" //
 			+ "uniform mat4 u_transform;\n" //
 			+ "uniform bool u_mirror;\n" //
@@ -15,9 +32,16 @@ public class SkyShader {
 			+ "    gl_Position = u_projTrans * v_pos;\n" //
 			+ "    if(u_mirror)\n" //
 			+ "        gl_Position.x *= -1.0;\n" //
-			+ "};\n"; //
+			+ "}\n"; //
 
-	public static final String fragment = "uniform sampler2D u_sky;\n" //
+	public static final String fragment =
+			"#version 110\n" //
+			+ "#ifdef GL_ES\n" //
+			+ "	precision mediump float;\n" //
+			+ "	precision mediump int;\n" //
+			+ "#endif\n" //
+			+ "\n" //
+			+ "uniform sampler2D u_texture;\n" //
 			+ "uniform sampler2D u_palette;\n" //
 			+ "uniform sampler2D u_palookup;\n" //
 			+ "uniform int u_numshades;\n" //
@@ -40,14 +64,14 @@ public class SkyShader {
 //			+ "    uv = uv * 0.5 + 0.5;\n" //
 			+ "    vec2 uv = vec2((atan(pix.y, pix.x) + PI) / (2.0 * PI), pix.z / 2.0);\n" //
 			+ "    uv = uv + 0.5;\n" //
-			+ "    float fi = texture2D(u_sky, uv).r;\n" //
+			+ "    float fi = texture2D(u_texture, uv).r;\n" //
 			+ "    if(fi == 1.0) fi -= 0.5 / 256.0;\n" //
 			+ "    float index = texture2D(u_palookup, vec2(fi, getpalookup(u_shade))).r;\n" //
 			+ "    if(index == 1.0) index -= 0.5 / 256.0;\n" //
 			+ "    gl_FragColor = vec4(texture2D(u_palette, vec2(index, 0.0)).rgb, u_alpha);\n" //
-			+ "};";
+			+ "}";
 
-	public static final String fragmentRGB = "uniform sampler2D u_sky;\n" //
+	public static final String fragmentRGB = "uniform sampler2D u_texture;\n" //
 			+ "uniform vec3 u_camera;\n" //
 			+ "varying vec4 v_pos;\n" //
 			+ "const float PI = 3.1415926538;\n" //
@@ -60,6 +84,6 @@ public class SkyShader {
 //			+ "    uv = uv * 0.5 + 0.5;\n" //
 			+ "    vec2 uv = vec2((atan(pix.y, pix.x) + PI) / (2.0 * PI), pix.z / 2.0);\n" //
 			+ "    uv = uv + 0.5;\n" //
-			+ "    gl_FragColor = texture2D(u_sky, uv);\n" //
-			+ "};";
+			+ "    gl_FragColor = texture2D(u_texture, uv);\n" //
+			+ "}";
 }

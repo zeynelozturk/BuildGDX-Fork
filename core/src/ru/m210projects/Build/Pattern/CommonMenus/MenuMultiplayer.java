@@ -16,19 +16,20 @@
 
 package ru.m210projects.Build.Pattern.CommonMenus;
 
-import ru.m210projects.Build.Pattern.BuildFont;
 import ru.m210projects.Build.Pattern.BuildGame;
 import ru.m210projects.Build.Pattern.MenuItems.BuildMenu;
 import ru.m210projects.Build.Pattern.MenuItems.MenuButton;
 import ru.m210projects.Build.Pattern.MenuItems.MenuTitle;
+import ru.m210projects.Build.Types.font.Font;
 
 public abstract class MenuMultiplayer extends BuildMenu {
 	
 	public MenuButton mCreate;
 	public MenuButton mJoin;
 
-	public MenuMultiplayer(BuildGame app, int posx, int posy, int menuHeight, BuildFont style)
+	public MenuMultiplayer(BuildGame app, int posx, int posy, int menuHeight, Font style)
 	{
+		super(app.pMenu);
 		addItem(getTitle(app, "Multiplayer"), false);
 
 		int pos = posy;

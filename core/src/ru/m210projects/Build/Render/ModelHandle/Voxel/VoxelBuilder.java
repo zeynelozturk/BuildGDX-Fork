@@ -1,3 +1,19 @@
+// This file is part of BuildGDX.
+// Copyright (C) 2023-2024 Alexander Makarov-[M210] (m210-2007@mail.ru)
+//
+// BuildGDX is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// BuildGDX is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with BuildGDX.  If not, see <http://www.gnu.org/licenses/>.
+
 package ru.m210projects.Build.Render.ModelHandle.Voxel;
 
 import static java.lang.Math.max;
@@ -18,8 +34,8 @@ public class VoxelBuilder {
 
 	// For loading / conversion only
 
-	public class Rectangle {
-		public Vertex[] v = { new Vertex(), new Vertex(), new Vertex(), new Vertex() };
+	public static class Rectangle {
+		private final Vertex[] v = {new Vertex(), new Vertex(), new Vertex(), new Vertex()};
 
 		public int getX(int num) {
 			return v[num].x;
@@ -42,7 +58,7 @@ public class VoxelBuilder {
 		}
 	}
 
-	private class Vertex {
+	private static class Vertex {
 		private int x, y, z, u, v;
 	}
 
@@ -113,8 +129,9 @@ public class VoxelBuilder {
 	private byte getvox(int x, int y, int z) {
 		z += x * yzsiz + y * zsiz;
 		Byte col = vcol.get(z);
-		if (col == null)
+		if (col == null) {
 			return 0; // (0x808080);
+		}
 		return (byte) ((pal[col & 0xFF] & 0xFFFFFFFFL) >> 24);
 	}
 
@@ -128,8 +145,9 @@ public class VoxelBuilder {
 		z = (z0 >> 5);
 		ze = (z1 >> 5);
 		lptr[z] |= (-1 << (z0 & 31));
-		for (z++; z < ze; z++)
+		for (z++; z < ze; z++) {
 			lptr[z] = -1;
+		}
 		lptr[z] |= ~(-1 << (z1 & 31));
 	}
 
@@ -142,34 +160,40 @@ public class VoxelBuilder {
 		m = ~pow2m1[x0 & 31];
 		m1 = pow2m1[(dx & 31) + 1];
 		if (c == 0) {
-			for (m &= m1; dy != 0; dy--, i += mytexo5)
+			for (m &= m1; dy != 0; dy--, i += mytexo5) {
 				zbit[i] |= m;
+			}
 		} else {
 			for (; dy != 0; dy--, i += mytexo5) {
 				zbit[i] |= m;
-				for (x = 1; x < c; x++)
+				for (x = 1; x < c; x++) {
 					zbit[i + x] = -1;
+				}
 				zbit[i + x] |= m1;
 			}
 		}
 	}
 
 	private int isolid(int[] vbit, int x, int y, int z) {
-		if ((x & 0xFFFFFFFFL) >= (xsiz & 0xFFFFFFFFL))
+		if ((x & 0xFFFFFFFFL) >= (xsiz & 0xFFFFFFFFL)) {
 			return (0);
-		if ((y & 0xFFFFFFFFL) >= (ysiz & 0xFFFFFFFFL))
+		}
+		if ((y & 0xFFFFFFFFL) >= (ysiz & 0xFFFFFFFFL)) {
 			return (0);
-		if ((z & 0xFFFFFFFFL) >= (zsiz & 0xFFFFFFFFL))
+		}
+		if ((z & 0xFFFFFFFFL) >= (zsiz & 0xFFFFFFFFL)) {
 			return (0);
+		}
 		z += x * yzsiz + y * zsiz;
 		return (vbit[z >> 5] & (1 << (z & 31)));
 	}
 
 	private void daquad(int i, int x0, int y0, int z0, int x1, int y1, int z1, int x2, int y2, int z2, int face) {
-		if (i == 0)
+		if (i == 0) {
 			cntquad(x0, y0, z0, x1, y1, z1, x2, y2, z2, face);
-		else
+		} else {
 			addquad(x0, y0, z0, x1, y1, z1, x2, y2, z2, face);
+		}
 	}
 
 	private void cntquad(int x0, int y0, int z0, int x1, int y1, int z1, int x2, int y2, int z2, int face) {
@@ -178,20 +202,23 @@ public class VoxelBuilder {
 		x = klabs(x2 - x0);
 		y = klabs(y2 - y0);
 		z = klabs(z2 - z0);
-		if (x == 0)
+		if (x == 0) {
 			x = z;
-		else if (y == 0)
+		} else if (y == 0) {
 			y = z;
+		}
 		if (x < y) {
 			z = x;
 			x = y;
 			y = z;
 		}
 		shcntmal[shcnt + y * shcntp + x]++;
-		if (x > gmaxx)
+		if (x > gmaxx) {
 			gmaxx = x;
-		if (y > gmaxy)
+		}
+		if (y > gmaxy) {
 			gmaxy = y;
+		}
 		garea += x * y;
 		qcnt++;
 	}
@@ -211,8 +238,9 @@ public class VoxelBuilder {
 		} else if (y == 0) {
 			y = z;
 			i = 1;
-		} else
+		} else {
 			i = 2;
+		}
 		if (x < y) {
 			z = x;
 			x = y;
@@ -262,7 +290,7 @@ public class VoxelBuilder {
 			break;
 		}
 
-		for (yy = 0; yy < y; yy++, lptr += mytexx)
+		for (yy = 0; yy < y; yy++, lptr += mytexx) {
 			for (xx = 0; xx < x; xx++) {
 				switch (face) {
 				case 0:
@@ -329,6 +357,7 @@ public class VoxelBuilder {
 
 				mytex[lptr + xx] = getvox(nx, ny, nz);
 			}
+		}
 
 		qptr = quad[qcnt];
 		qptr.v[0].x = x0;
@@ -344,10 +373,11 @@ public class VoxelBuilder {
 			qptr.v[j].u = (int) shp[z].x;
 			qptr.v[j].v = (int) shp[z].y;
 		}
-		if (i < 3)
+		if (i < 3) {
 			qptr.v[1].u += x;
-		else
+		} else {
 			qptr.v[1].v += y;
+		}
 		qptr.v[2].u += x;
 		qptr.v[2].v += y;
 
@@ -356,8 +386,9 @@ public class VoxelBuilder {
 		qptr.v[3].x = qptr.v[0].x - qptr.v[1].x + qptr.v[2].x;
 		qptr.v[3].y = qptr.v[0].y - qptr.v[1].y + qptr.v[2].y;
 		qptr.v[3].z = qptr.v[0].z - qptr.v[1].z + qptr.v[2].z;
-		if (qfacind[face] < 0)
+		if (qfacind[face] < 0) {
 			qfacind[face] = qcnt;
+		}
 
 		int vertexOffset = vertices.size / 6;
 		for (i = 0; i < 4; i++) {
@@ -394,7 +425,7 @@ public class VoxelBuilder {
 
 		yzsiz = ysiz * zsiz;
 		int[] vbit = new int[((xsiz * yzsiz + 31) >> 3) + 1]; // vbit: 1 bit per voxel: 0=air, 1=solid
-		vcol = new HashMap<Integer, Byte>();
+		vcol = new HashMap<>();
 		pow2m1 = new int[33];
 
 		int cptr = 0;
@@ -408,14 +439,16 @@ public class VoxelBuilder {
 				while (voxptr < voxend) {
 					ztop = vox.data[mip][cptr] & 0xFF;
 					zleng = vox.data[mip][cptr + 1] & 0xFF;
-					if ((vox.data[mip][cptr + 2] & 16) == 0)
+					if ((vox.data[mip][cptr + 2] & 16) == 0) {
 						setzrange1(vbit, j + z1, j + ztop);
+					}
 					z1 = ztop + zleng;
 					setzrange1(vbit, j + ztop, j + z1);
 					cptr += 3; // voxel color
 					for (z = ztop; z < z1; z++) {
-						if (cptr >= vox.data[mip].length)
+						if (cptr >= vox.data[mip].length) {
 							break;
+						}
 						putvox(x, y, z, vox.data[mip][cptr++]);
 					}
 
@@ -429,10 +462,11 @@ public class VoxelBuilder {
 		y = ysiz;
 		z = zsiz;
 
-		if ((x < y) && (x < z))
+		if ((x < y) && (x < z)) {
 			x = z;
-		else if (y < z)
+		} else if (y < z) {
 			y = z;
+		}
 		if (x < y) {
 			z = x;
 			x = y;
@@ -445,13 +479,15 @@ public class VoxelBuilder {
 		gmaxx = gmaxy = garea = 0;
 
 		if (pow2m1[32] != -1) {
-			for (i = 0; i < 32; i++)
+			for (i = 0; i < 32; i++) {
 				pow2m1[i] = (1 << i) - 1;
+			}
 			pow2m1[32] = -1;
 		}
 
-		for (i = 0; i < 7; i++)
+		for (i = 0; i < 7; i++) {
 			qfacind[i] = -1;
+		}
 
 		i = ((max(ysiz, zsiz) + 1) << 2);
 		bx0 = new int[i << 1];
@@ -464,8 +500,9 @@ public class VoxelBuilder {
 			v = 0;
 
 			for (i = -1; i <= 1; i += 2) // add x surfaces
-				for (y = 0; y < ysiz; y++)
-					for (x = 0; x <= xsiz; x++)
+			{
+				for (y = 0; y < ysiz; y++) {
+					for (x = 0; x <= xsiz; x++) {
 						for (z = 0; z <= zsiz; z++) {
 							ov = v;
 							v = (isolid(vbit, x, y, z) != 0 && (isolid(vbit, x, y + i, z) == 0)) ? 1 : 0;
@@ -473,17 +510,21 @@ public class VoxelBuilder {
 								daquad(cnt, bx0[z], y, by0[z], x, y, by0[z], x, y, z, (i >= 0) ? 1 : 0);
 								by0[z] = -1;
 							}
-							if (v > ov)
+							if (v > ov) {
 								oz = z;
-							else if ((v < ov) && (by0[z] != oz)) {
+							} else if ((v < ov) && (by0[z] != oz)) {
 								bx0[z] = x;
 								by0[z] = oz;
 							}
 						}
+					}
+				}
+			}
 
 			for (i = -1; i <= 1; i += 2) // add z surfaces
-				for (z = 0; z < zsiz; z++)
-					for (x = 0; x <= xsiz; x++)
+			{
+				for (z = 0; z < zsiz; z++) {
+					for (x = 0; x <= xsiz; x++) {
 						for (y = 0; y <= ysiz; y++) {
 							ov = v;
 							v = (isolid(vbit, x, y, z) != 0 && (isolid(vbit, x, y, z - i) == 0)) ? 1 : 0;
@@ -491,17 +532,21 @@ public class VoxelBuilder {
 								daquad(cnt, bx0[y], by0[y], z, x, by0[y], z, x, y, z, ((i >= 0) ? 1 : 0) + 2);
 								by0[y] = -1;
 							}
-							if (v > ov)
+							if (v > ov) {
 								oz = y;
-							else if ((v < ov) && (by0[y] != oz)) {
+							} else if ((v < ov) && (by0[y] != oz)) {
 								bx0[y] = x;
 								by0[y] = oz;
 							}
 						}
+					}
+				}
+			}
 
 			for (i = -1; i <= 1; i += 2) // add y surfaces
-				for (x = 0; x < xsiz; x++)
-					for (y = 0; y <= ysiz; y++)
+			{
+				for (x = 0; x < xsiz; x++) {
+					for (y = 0; y <= ysiz; y++) {
 						for (z = 0; z <= zsiz; z++) {
 							ov = v;
 							v = (isolid(vbit, x, y, z) != 0 && (isolid(vbit, x - i, y, z) == 0)) ? 1 : 0;
@@ -509,21 +554,25 @@ public class VoxelBuilder {
 								daquad(cnt, x, bx0[z], by0[z], x, y, by0[z], x, y, z, ((i >= 0) ? 1 : 0) + 4);
 								by0[z] = -1;
 							}
-							if (v > ov)
+							if (v > ov) {
 								oz = z;
-							else if ((v < ov) && (by0[z] != oz)) {
+							} else if ((v < ov) && (by0[z] != oz)) {
 								bx0[z] = y;
 								by0[z] = oz;
 							}
 						}
+					}
+				}
+			}
 
 			if (cnt == 0) {
 				shp = new Vector2[qcnt];
-				for (int vc = 0; vc < qcnt; vc++)
+				for (int vc = 0; vc < qcnt; vc++) {
 					shp[vc] = new Vector2();
+				}
 
 				sc = 0;
-				for (y = gmaxy; y != 0; y--)
+				for (y = gmaxy; y != 0; y--) {
 					for (x = gmaxx; x >= y; x--) {
 						i = shcntmal[shcnt + y * shcntp + x];
 						shcntmal[shcnt + y * shcntp + x] = sc; // shcnt changes from counter to head index
@@ -533,17 +582,23 @@ public class VoxelBuilder {
 							sc++;
 						}
 					}
+				}
 
-				for (mytexx = 32; mytexx < gmaxx; mytexx <<= 1)
+				for (mytexx = 32; mytexx < gmaxx; mytexx <<= 1) {
 					;
-				for (mytexy = 32; mytexy < gmaxy; mytexy <<= 1)
+				}
+				for (mytexy = 32; mytexy < gmaxy; mytexy <<= 1) {
 					;
+				}
 
 				while (mytexx * mytexy * 8 < garea * 9) // This should be sufficient to fit most skins...
-					if (mytexx <= mytexy)
+				{
+					if (mytexx <= mytexy) {
 						mytexx <<= 1;
-					else
+					} else {
 						mytexy <<= 1;
+					}
+				}
 
 				mytexo5 = (mytexx >> 5);
 				i = (((mytexx * mytexy + 31) >> 5) << 2);
@@ -567,7 +622,7 @@ public class VoxelBuilder {
 							// Re-generate shp[].x/y (box sizes) from shcnt (now head indices) for next pass
 							// :/
 							j = 0;
-							for (y = gmaxy; y != 0; y--)
+							for (y = gmaxy; y != 0; y--) {
 								for (x = gmaxx; x >= y; x--) {
 									i = shcntmal[shcnt + y * shcntp + x];
 									for (; j < i; j++) {
@@ -577,15 +632,17 @@ public class VoxelBuilder {
 									x0 = x;
 									y0 = y;
 								}
+							}
 							for (; j < sc; j++) {
 								shp[j].x = x0;
 								shp[j].y = y0;
 							}
 
-							if (mytexx <= mytexy)
+							if (mytexx <= mytexy) {
 								mytexx <<= 1;
-							else
+							} else {
 								mytexy <<= 1;
+							}
 							mytexo5 = (mytexx >> 5);
 							i = (((mytexx * mytexy + 31) >> 5) << 2);
 							v = mytexx * mytexy;
@@ -593,18 +650,21 @@ public class VoxelBuilder {
 							continue skindidntfit;
 						}
 					} while (isrectfree(x0, y0, dx, dy) == 0);
-					while ((y0 != 0) && (isrectfree(x0, y0 - 1, dx, 1) != 0))
+					while ((y0 != 0) && (isrectfree(x0, y0 - 1, dx, 1) != 0)) {
 						y0--;
-					while ((x0 != 0) && (isrectfree(x0 - 1, y0, 1, dy) != 0))
+					}
+					while ((x0 != 0) && (isrectfree(x0 - 1, y0, 1, dy) != 0)) {
 						x0--;
+					}
 					setrect(x0, y0, dx, dy);
 					shp[z].x = x0;
 					shp[z].y = y0; // Overwrite size with top-left location
 				}
 
 				quad = new Rectangle[qcnt];
-				for (int vx = 0; vx < qcnt; vx++)
+				for (int vx = 0; vx < qcnt; vx++) {
 					quad[vx] = new Rectangle();
+				}
 				mytex = new byte[mytexx * mytexy];
 			}
 		}
@@ -620,18 +680,24 @@ public class VoxelBuilder {
 		m = ~pow2m1[x0 & 31];
 		m1 = pow2m1[(dx & 31) + 1];
 		if (c == 0) {
-			for (m &= m1; dy != 0; dy--, i += mytexo5)
-				if ((zbit[i] & m) != 0)
+			for (m &= m1; dy != 0; dy--, i += mytexo5) {
+				if ((zbit[i] & m) != 0) {
 					return (0);
+				}
+			}
 		} else {
 			for (; dy != 0; dy--, i += mytexo5) {
-				if ((zbit[i] & m) != 0)
+				if ((zbit[i] & m) != 0) {
 					return (0);
-				for (x = 1; x < c; x++)
-					if (zbit[i + x] != 0)
+				}
+				for (x = 1; x < c; x++) {
+					if (zbit[i + x] != 0) {
 						return (0);
-				if ((zbit[i + x] & m1) != 0)
+					}
+				}
+				if ((zbit[i + x] & m1) != 0) {
 					return (0);
+				}
 			}
 		}
 

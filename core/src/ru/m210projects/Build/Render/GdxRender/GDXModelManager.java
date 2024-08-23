@@ -1,3 +1,19 @@
+// This file is part of BuildGDX.
+// Copyright (C) 2023-2024 Alexander Makarov-[M210] (m210-2007@mail.ru)
+//
+// BuildGDX is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// BuildGDX is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with BuildGDX.  If not, see <http://www.gnu.org/licenses/>.
+
 package ru.m210projects.Build.Render.GdxRender;
 
 import static ru.m210projects.Build.Engine.DETAILPAL;
@@ -5,7 +21,6 @@ import static ru.m210projects.Build.Engine.GLOWPAL;
 import static ru.m210projects.Build.Engine.MAXPALOOKUPS;
 import static ru.m210projects.Build.Engine.MAXTILES;
 import static ru.m210projects.Build.Engine.RESERVEDPALS;
-import static ru.m210projects.Build.Engine.palookup;
 import static ru.m210projects.Build.Render.Types.GL10.GL_TEXTURE0;
 
 import com.badlogic.gdx.graphics.Pixmap;
@@ -13,10 +28,10 @@ import com.badlogic.gdx.graphics.Texture.TextureFilter;
 import com.badlogic.gdx.graphics.Texture.TextureWrap;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 
-import ru.m210projects.Build.Architecture.BuildGdx;
-import ru.m210projects.Build.FileHandle.Resource;
-import ru.m210projects.Build.OnSceenDisplay.Console;
-import ru.m210projects.Build.Render.GdxRender.Shaders.ShaderManager.Shader;
+import ru.m210projects.Build.Render.TexFilter;
+import ru.m210projects.Build.filehandle.Cache;
+import ru.m210projects.Build.filehandle.Entry;
+import ru.m210projects.Build.osd.Console;import ru.m210projects.Build.Render.GdxRender.Shaders.ShaderManager.Shader;
 import ru.m210projects.Build.Render.ModelHandle.GLModel;
 import ru.m210projects.Build.Render.ModelHandle.ModelInfo;
 import ru.m210projects.Build.Render.ModelHandle.ModelManager;
@@ -36,12 +51,14 @@ import ru.m210projects.Build.Render.TextureHandle.IndexedShader;
 import ru.m210projects.Build.Render.TextureHandle.PixmapTileData;
 import ru.m210projects.Build.Render.TextureHandle.TileData;
 import ru.m210projects.Build.Render.TextureHandle.TileData.PixelFormat;
+import ru.m210projects.Build.osd.OsdColor;
 
 public class GDXModelManager extends ModelManager {
 
 	private final GDXRenderer parent;
 
 	public GDXModelManager(GDXRenderer parent) {
+		super(parent.getEngine());
 		this.parent = parent;
 	}
 
@@ -52,13 +69,14 @@ public class GDXModelManager extends ModelManager {
 			@Override
 			public GLTile getSkin(int pal) {
 				PixelFormat fmt = parent.getTexFormat();
-				if (palookup[pal] == null || fmt == PixelFormat.Pal8)
+				if (!parent.getPaletteManager().isValidPalette(pal) || fmt == PixelFormat.Pal8) {
 					pal = 0;
+				}
 
 				if (texid[pal] == null) {
 					long startticks = System.nanoTime();
-					TileData dat = new VoxelSkin(fmt, skinData, pal);
-					GLTile dst = parent.textureCache.newTile(dat, pal, false);
+					TileData dat = new VoxelSkin(fmt, parent.getPaletteManager(), skinData, pal);
+					GLTile dst = parent.textureCache.newTile(dat, pal, TexFilter.NONE);
 
 					dst.unsafeSetFilter(TextureFilter.Nearest, TextureFilter.Nearest, true);
 					dst.unsafeSetAnisotropicFilter(1, true);
@@ -92,54 +110,59 @@ public class GDXModelManager extends ModelManager {
 
 	@Override
 	public GLModel allocateModel(ModelInfo modelInfo) {
-		switch (modelInfo.getType()) {
-		case Md2:
-			return new MD2ModelGL20((MD2Info) modelInfo) {
-				@Override
-				public ShaderProgram getShader() {
-					return parent.manager.getProgram();
-				}
+		try {
+			switch (modelInfo.getType()) {
+				case Md2:
+					return new MD2ModelGL20((MD2Info) modelInfo) {
+						@Override
+						public ShaderProgram getShader() {
+							return parent.manager.getProgram();
+						}
 
-				@Override
-				protected int bindSkin(int pal, int skinnum) {
-					return bindMDSkin(this, pal, skinnum, 0);
-				}
+						@Override
+						protected int bindSkin(int pal, int skinnum) {
+							return bindMDSkin(this, pal, skinnum, 0);
+						}
 
-				@Override
-				protected GLTile loadTexture(String skinfile, int palnum) {
-					return loadMDTexture(this, skinfile, palnum);
-				}
-			};
-		case Md3:
-			return new MD3ModelGL20((MD3Info) modelInfo) {
-				@Override
-				public ShaderProgram getShader() {
-					return parent.manager.getProgram();
-				}
+						@Override
+						protected GLTile loadTexture(String skinfile, int palnum) {
+							return loadMDTexture(this, skinfile, palnum);
+						}
+					};
+				case Md3:
+					return new MD3ModelGL20((MD3Info) modelInfo) {
+						@Override
+						public ShaderProgram getShader() {
+							return parent.manager.getProgram();
+						}
 
-				@Override
-				protected int bindSkin(int pal, int skinnum, int surfnum) {
-					return bindMDSkin(this, pal, skinnum, surfnum);
-				}
+						@Override
+						protected int bindSkin(int pal, int skinnum, int surfnum) {
+							return bindMDSkin(this, pal, skinnum, surfnum);
+						}
 
-				@Override
-				protected GLTile loadTexture(String skinfile, int palnum) {
-					return loadMDTexture(this, skinfile, palnum);
-				}
-			};
-		default:
-			return null;
+						@Override
+						protected GLTile loadTexture(String skinfile, int palnum) {
+							return loadMDTexture(this, skinfile, palnum);
+						}
+					};
+			}
+		} catch (Exception e) {
+			Console.out.println(e.toString(), OsdColor.RED);
 		}
+
+		return null;
 	}
 
 	protected GLTile loadMDTexture(MDModel m, String skinfile, int palnum) {
 		GLTile texidx = findLoadedMultitexture(skinfile, palnum);
-		if (texidx != null)
+		if (texidx != null) {
 			return texidx;
+		}
 
-		Resource res = BuildGdx.cache.open(skinfile, 0);
-		if (res == null) {
-			Console.Println("Skin " + skinfile + " not found.", Console.OSDTEXT_YELLOW);
+		Entry res = Cache.getInstance().getEntry(skinfile, true);
+		if (!res.exists()) {
+			Console.out.println("Skin " + skinfile + " not found.", OsdColor.YELLOW);
 			return null;
 		}
 
@@ -147,15 +170,14 @@ public class GDXModelManager extends ModelManager {
 		try {
 			byte[] data = res.getBytes();
 			Pixmap pix = new Pixmap(data, 0, data.length);
-			texidx = parent.textureCache.newTile(new PixmapTileData(pix, true, 0), 0, true);
-			if (palnum == DETAILPAL || palnum == GLOWPAL)
+			texidx = parent.textureCache.newTile(new PixmapTileData(pix, true, 0), 0, parent.getConfig().getGlfilter());
+			if (palnum == DETAILPAL || palnum == GLOWPAL) {
 				texidx.setHighTile(new Hicreplctyp(palnum));
+			}
 			m.usesalpha = true;
 		} catch (Exception e) {
-			Console.Println("Couldn't load file: " + skinfile, Console.OSDTEXT_YELLOW);
+			Console.out.println("Couldn't load file: " + skinfile, OsdColor.YELLOW);
 			return null;
-		} finally {
-			res.close();
 		}
 		texidx.setupTextureWrap(TextureWrap.Repeat);
 
@@ -182,18 +204,18 @@ public class GDXModelManager extends ModelManager {
 //				if ((texid = m.getSkin(DETAILPAL, skinnum, surfnum)) != null) {
 //					if (!texid.isDetailTexture())
 //						System.err.println("Wtf detail!");
-//					BuildGdx.gl.glActiveTexture(++texunits);
-//					BuildGdx.gl.glEnable(GL_TEXTURE_2D);
+//					Gdx.gl.glActiveTexture(++texunits);
+//					Gdx.gl.glEnable(GL_TEXTURE_2D);
 //					parent.bind(texid);
 //					parent.setupTextureDetail(texid);
 //
 //					for (MDSkinmap sk = m.skinmap; sk != null; sk = sk.next)
 //						if (sk.palette == DETAILPAL && skinnum == sk.skinnum && surfnum == sk.surfnum) {
 //							float f = sk.param;
-//							BuildGdx.gl.glMatrixMode(GL_TEXTURE);
-//							BuildGdx.gl.glLoadIdentity();
-//							BuildGdx.gl.glScalef(f, f, 1.0f);
-//							BuildGdx.gl.glMatrixMode(GL_MODELVIEW);
+//							Gdx.gl.glMatrixMode(GL_TEXTURE);
+//							Gdx.gl.glLoadIdentity();
+//							Gdx.gl.glScalef(f, f, 1.0f);
+//							Gdx.gl.glMatrixMode(GL_MODELVIEW);
 //						}
 //				}
 //			}
@@ -203,8 +225,8 @@ public class GDXModelManager extends ModelManager {
 //					if (!texid.isGlowTexture())
 //						System.err.println("Wtf glow! " + surfnum);
 //
-//					BuildGdx.gl.glActiveTexture(++texunits);
-//					BuildGdx.gl.glEnable(GL_TEXTURE_2D);
+//					Gdx.gl.glActiveTexture(++texunits);
+//					Gdx.gl.glEnable(GL_TEXTURE_2D);
 //					parent.bind(texid);
 //					parent.setupTextureGlow(texid);
 //				}
@@ -219,22 +241,24 @@ public class GDXModelManager extends ModelManager {
 		if (palnum >= (MAXPALOOKUPS - RESERVEDPALS)) {
 			for (int i = MAXTILES - 1; i >= 0; i--) {
 				GLModel m = models[i];
-				if (!(m instanceof MDModel))
+				if (!(m instanceof MDModel)) {
 					continue;
+				}
 
-				for (MDSkinmap sk = ((MDModel) m).skinmap; sk != null; sk = sk.next)
+				for (MDSkinmap sk = ((MDModel) m).skinmap; sk != null; sk = sk.next) {
 					if (sk.fn.equalsIgnoreCase(skinfile) && sk.texid != null) {
 						if (sk.palette != palnum) {
 							GLTile texidx = sk.texid.clone();
 							if (palnum == DETAILPAL || palnum == GLOWPAL) {
 								texidx.setHighTile(new Hicreplctyp(palnum));
-								texidx.update(null, palnum, true);
+								texidx.update(null, palnum, parent.getConfig().getGlfilter());
 								return texidx;
 							}
 						}
 
 						return sk.texid;
 					}
+				}
 			}
 		}
 

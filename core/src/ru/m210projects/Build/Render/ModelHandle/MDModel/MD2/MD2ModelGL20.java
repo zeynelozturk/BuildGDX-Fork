@@ -1,5 +1,22 @@
+// This file is part of BuildGDX.
+// Copyright (C) 2023-2024 Alexander Makarov-[M210] (m210-2007@mail.ru)
+//
+// BuildGDX is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// BuildGDX is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with BuildGDX.  If not, see <http://www.gnu.org/licenses/>.
+
 package ru.m210projects.Build.Render.ModelHandle.MDModel.MD2;
 
+import java.io.IOException;
 import java.nio.FloatBuffer;
 
 import com.badlogic.gdx.graphics.GL20;
@@ -19,7 +36,7 @@ public abstract class MD2ModelGL20 extends MDModel {
 	private final MD2Triangle[] tris;
 	private float oldinterpol;
 
-	public MD2ModelGL20(MD2Info md) {
+	public MD2ModelGL20(MD2Info md) throws IOException {
 		super(md);
 
 		MD2Builder builder = new MD2Builder(md);
@@ -31,9 +48,11 @@ public abstract class MD2ModelGL20 extends MDModel {
 		ShortArray indices = new ShortArray(numTriangles * 3);
 		FloatArray vertices = new FloatArray(numTriangles * 3 * 6);
 
-		for (int i = 0; i < numTriangles; i++)
-			for (int j = 0; j < 3; j++)
+		for (int i = 0; i < numTriangles; i++) {
+			for (int j = 0; j < 3; j++) {
 				indices.add((short) (i * 3 + j));
+			}
+		}
 
 		MD2Frame cframe = frames[this.cframe];
 		for (int i = 0; i < tris.length; i++) {

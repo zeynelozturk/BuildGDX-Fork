@@ -1,3 +1,19 @@
+// This file is part of BuildGDX.
+// Copyright (C) 2023-2024 Alexander Makarov-[M210] (m210-2007@mail.ru)
+//
+// BuildGDX is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// BuildGDX is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with BuildGDX.  If not, see <http://www.gnu.org/licenses/>.
+
 package ru.m210projects.Build.Render.ModelHandle.MDModel.MD3;
 
 import static com.badlogic.gdx.graphics.GL20.GL_CULL_FACE;
@@ -14,6 +30,7 @@ import static ru.m210projects.Build.Render.Types.GL10.GL_TEXTURE_COORD_ARRAY;
 import static ru.m210projects.Build.Render.Types.GL10.GL_TEXTURE_ENV;
 import static ru.m210projects.Build.Render.Types.GL10.GL_VERTEX_ARRAY;
 
+import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 
@@ -21,9 +38,9 @@ import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.BufferUtils;
 
-import ru.m210projects.Build.Architecture.BuildGdx;
 import ru.m210projects.Build.Render.ModelHandle.ModelInfo.Type;
 import ru.m210projects.Build.Render.ModelHandle.MDModel.MDModel;
+import ru.m210projects.Build.Render.Types.GL10;
 
 public abstract class MD3ModelGL10 extends MDModel {
 
@@ -32,9 +49,11 @@ public abstract class MD3ModelGL10 extends MDModel {
 
 	private final MD3Surface[] surfaces;
 	private final int numSurfaces;
+	private final GL10 gl10;
 
-	public MD3ModelGL10(MD3Info md) {
+	public MD3ModelGL10(GL10 gl10, MD3Info md) throws IOException {
 		super(md);
+		this.gl10 = gl10;
 
 		MD3Builder builder = new MD3Builder(md);
 
@@ -77,44 +96,48 @@ public abstract class MD3ModelGL10 extends MDModel {
 				vertices.flip();
 
 				indices.clear();
-				for (int i = s.numtris - 1; i >= 0; i--)
-					for (int j = 0; j < 3; j++)
+				for (int i = s.numtris - 1; i >= 0; i--) {
+					for (int j = 0; j < 3; j++) {
 						indices.put((short) s.tris[i][j]);
+					}
+				}
 				indices.flip();
 
 				int l = GL_TEXTURE0;
 				do {
-					BuildGdx.gl.glClientActiveTexture(l++);
-					BuildGdx.gl.glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-					BuildGdx.gl.glTexCoordPointer(2, GL_FLOAT, 0, s.uv);
+					gl10.glClientActiveTexture(l++);
+					gl10.glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+					gl10.glTexCoordPointer(2, GL_FLOAT, 0, s.uv);
 				} while (l <= texunits);
 
-				BuildGdx.gl.glEnableClientState(GL_VERTEX_ARRAY);
-				BuildGdx.gl.glVertexPointer(3, GL_FLOAT, 0, vertices);
-				BuildGdx.gl.glDrawElements(GL_TRIANGLES, 0, GL_UNSIGNED_SHORT, indices);
+				gl10.glEnableClientState(GL_VERTEX_ARRAY);
+				gl10.glVertexPointer(3, GL_FLOAT, 0, vertices);
+				gl10.glDrawElements(GL_TRIANGLES, 0, GL_UNSIGNED_SHORT, indices);
 
 				while (texunits > GL_TEXTURE0) {
-					BuildGdx.gl.glMatrixMode(GL_TEXTURE);
-					BuildGdx.gl.glLoadIdentity();
-					BuildGdx.gl.glMatrixMode(GL_MODELVIEW);
-					BuildGdx.gl.glTexEnvf(GL_TEXTURE_ENV, GL_RGB_SCALE, 1.0f);
-					BuildGdx.gl.glDisable(GL_TEXTURE_2D);
+					gl10.glMatrixMode(GL_TEXTURE);
+					gl10.glLoadIdentity();
+					gl10.glMatrixMode(GL_MODELVIEW);
+					gl10.glTexEnvf(GL_TEXTURE_ENV, GL_RGB_SCALE, 1.0f);
+					gl10.glDisable(GL_TEXTURE_2D);
 
-					BuildGdx.gl.glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-					BuildGdx.gl.glClientActiveTexture(texunits - 1);
+					gl10.glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+					gl10.glClientActiveTexture(texunits - 1);
 
-					BuildGdx.gl.glActiveTexture(--texunits);
+					gl10.glActiveTexture(--texunits);
 				}
-				BuildGdx.gl.glDisableClientState(GL_VERTEX_ARRAY);
+				gl10.glDisableClientState(GL_VERTEX_ARRAY);
 				isRendered = true;
-			} else
+			} else {
 				break;
+			}
 		}
 
-		if (usesalpha)
-			BuildGdx.gl.glDisable(GL_ALPHA_TEST);
-		BuildGdx.gl.glDisable(GL_CULL_FACE);
-		BuildGdx.gl.glLoadIdentity();
+		if (usesalpha) {
+			gl10.glDisable(GL_ALPHA_TEST);
+		}
+		gl10.glDisable(GL_CULL_FACE);
+		gl10.glLoadIdentity();
 
 		return isRendered;
 	}
@@ -132,8 +155,9 @@ public abstract class MD3ModelGL10 extends MDModel {
 
 	@Override
 	public void loadSkins(int pal, int skinnum) {
-		for (int surfi = 0; surfi < numSurfaces; surfi++)
+		for (int surfi = 0; surfi < numSurfaces; surfi++) {
 			getSkin(pal, skinnum, surfi);
+		}
 	}
 
 	@Override

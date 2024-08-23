@@ -1,3 +1,19 @@
+// This file is part of BuildGDX.
+// Copyright (C) 2023-2024 Alexander Makarov-[M210] (m210-2007@mail.ru)
+//
+// BuildGDX is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// BuildGDX is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with BuildGDX.  If not, see <http://www.gnu.org/licenses/>.
+
 package ru.m210projects.Build.Render.GdxRender;
 
 import static ru.m210projects.Build.Gameutils.AngleToRadians;
@@ -91,8 +107,9 @@ public class BuildCamera extends PerspectiveCamera {
 
 	public float getAngle() {
 		float angle = MathUtils.atan2(direction.y, direction.x);
-		if (angle < 0)
+		if (angle < 0) {
 			angle += MathUtils.PI2;
+		}
 		return BClampAngle(angle * radiansToBuildAngle);
 	}
 
@@ -129,15 +146,18 @@ public class BuildCamera extends PerspectiveCamera {
 	}
 
 	public boolean polyInCamera(ArrayList<? extends Vector3> list) {
-		if (list == null)
+		if (list == null) {
 			return false;
+		}
 
 		Plane[] planes = this.frustum.planes;
 		Plane: for (int i = 2; i < planes.length; i++) {
 			Plane plane = planes[i];
-			for (int p = 0; p < list.size(); p++)
-				if (plane.testPoint(list.get(p)) != PlaneSide.Back)
+			for (int p = 0; p < list.size(); p++) {
+				if (plane.testPoint(list.get(p)) != PlaneSide.Back) {
 					continue Plane;
+				}
+			}
 
 			return false;
 		}

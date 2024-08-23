@@ -19,6 +19,36 @@ package ru.m210projects.Build.Types;
 public class BuildPos {
 	
 	public int x, y, z;
-	public short ang, sectnum;
+	public int ang, sectnum;
 
+	public BuildPos() {
+	}
+
+	public BuildPos(int x, int y, int z, int ang, int sectnum) {
+		this.x = x;
+		this.y = y;
+		this.z = z;
+		this.ang = ang;
+		this.sectnum = sectnum;
+	}
+
+	public int getX() {
+		return x;
+	}
+
+	public int getY() {
+		return y;
+	}
+
+	public int getZ() {
+		return z;
+	}
+
+	public int getAng() {
+		return ang;
+	}
+
+	public int getSectnum() {
+		return sectnum;
+	}
 }

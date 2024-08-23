@@ -1,10 +1,25 @@
+// This file is part of BuildGDX.
+// Copyright (C) 2023-2024 Alexander Makarov-[M210] (m210-2007@mail.ru)
+//
+// BuildGDX is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// BuildGDX is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with BuildGDX.  If not, see <http://www.gnu.org/licenses/>.
+
 package ru.m210projects.Build.Render.GdxRender;
 
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.IntArray;
 
-import ru.m210projects.Build.Render.GdxRender.Pool;
-import ru.m210projects.Build.Render.GdxRender.Pool.Poolable;
+import ru.m210projects.Build.Types.collections.Pool.Poolable;
 
 public class VisibleSector implements Poolable {
 
@@ -28,14 +43,18 @@ public class VisibleSector implements Poolable {
 		float miny = this.y1;
 		float maxy = this.y2;
 
-		if (bounds[0].x < minx)
+		if (bounds[0].x < minx) {
 			minx = bounds[0].x;
-		if (bounds[1].x > maxx)
+		}
+		if (bounds[1].x > maxx) {
 			maxx = bounds[1].x;
-		if (bounds[0].y < miny)
+		}
+		if (bounds[0].y < miny) {
 			miny = bounds[0].y;
-		if (bounds[1].y > maxy)
+		}
+		if (bounds[1].y > maxy) {
 			maxy = bounds[1].y;
+		}
 
 		if (minx < x1 || maxx > x2 || miny < y1 || maxy > y2) {
 			this.x1 = minx;

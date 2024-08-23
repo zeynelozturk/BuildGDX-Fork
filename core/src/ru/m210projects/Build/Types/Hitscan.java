@@ -18,5 +18,39 @@ package ru.m210projects.Build.Types;
 
 public class Hitscan {
 	public int hitx = -1, hity = -1, hitz = -1;
-	public short hitsect = -1, hitwall = -1, hitsprite = -1;
+	public int hitsect = -1, hitwall = -1, hitsprite = -1;
+
+	public int getX() {
+		return hitx;
+	}
+
+	public void setX(int x) {
+		this.hitx = x;
+	}
+
+	public int getY() {
+		return hity;
+	}
+
+	public void setY(int y) {
+		this.hity = y;
+	}
+
+	public int getZ() {
+		return hitz;
+	}
+
+	public void setZ(int z) {
+		this.hitz = z;
+	}
+
+	public void set(int x, int y, int z, int sector, int wall, int sprite) {
+		this.hitx = x;
+		this.hity = y;
+		this.hitz = z;
+
+		this.hitsect = sector;
+		this.hitwall = wall;
+		this.hitsprite = sprite;
+	}
 }

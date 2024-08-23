@@ -40,8 +40,9 @@ public class AudioInfo {
 	
 	public String getDigitalInfo(String midi)
 	{
-		if(midi != null)
+		if(midi != null) {
 			return midToMusic.get(toLowerCase(midi));
+		}
 		
 		return null;
 	}

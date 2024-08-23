@@ -88,8 +88,9 @@ public class TileAtlas {
 		for (int i = 0, j, k; i < pic.getHeight(); i++) {
 			dptr = (i * fmt.getLength() * atlasWidth) + offs;
 			for (j = 0; j < pic.getWidth(); j++) {
-				for (k = 0; k < fmt.getLength(); k++)
+				for (k = 0; k < fmt.getLength(); k++) {
 					buf.put(dptr++, symbolBuffer.get());
+				}
 			}
 		}
 
@@ -99,8 +100,9 @@ public class TileAtlas {
 
 	public void clearTile(int nTile) {
 		TileUnit tile = getTile(nTile);
-		if (tile == null)
+		if (tile == null) {
 			return;
+		}
 
 		int atlasnum = tile.atlasnum;
 		int u1 = (int) (tile.u1 * atlasWidth / gridWidth);
@@ -112,8 +114,9 @@ public class TileAtlas {
 		for (int i = 0, j, k; i < gridHeight; i++) {
 			dptr = (i * fmt.getLength() * atlasWidth) + offs;
 			for (j = 0; j < gridWidth; j++) {
-				for (k = 0; k < fmt.getLength(); k++)
+				for (k = 0; k < fmt.getLength(); k++) {
 					buf.put(dptr++, fmt == PixelFormat.Pal8 ? (byte) -1 : 0);
+				}
 			}
 		}
 	}
@@ -139,8 +142,9 @@ public class TileAtlas {
 		if ((atlas.size() - 1) < atlasnum) {
 			TileData data = new DummyTileData(fmt, atlasWidth, atlasHeight);
 			ByteBuffer buf = data.getPixels();
-			for (int j = 0; j < buf.capacity(); j++)
+			for (int j = 0; j < buf.capacity(); j++) {
 				buf.put(fmt == PixelFormat.Pal8 ? (byte) -1 : 0);
+			}
 			atlas.add(data);
 		}
 
@@ -151,8 +155,9 @@ public class TileAtlas {
 		for (int i = 0, j, k; i < pic.getHeight(); i++) {
 			dptr = (i * fmt.getLength() * atlasWidth) + offs;
 			for (j = 0; j < pic.getWidth(); j++) {
-				for (k = 0; k < fmt.getLength(); k++)
+				for (k = 0; k < fmt.getLength(); k++) {
 					buf.put(dptr++, symbolBuffer.get());
+				}
 			}
 		}
 
@@ -180,12 +185,13 @@ public class TileAtlas {
 
 	private static int[] getAtlasSize(int numtiles) {
 		int x = (int) Math.floor(Math.sqrt(numtiles)), y;
-		if (x * x == numtiles)
+		if (x * x == numtiles) {
 			y = x;
-		else {
+		} else {
 			y = x + 1;
-			if (x * y < numtiles)
+			if (x * y < numtiles) {
 				x++;
+			}
 		}
 
 		return new int[] { x, y };

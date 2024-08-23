@@ -7,17 +7,13 @@
 
 package ru.m210projects.Build;
 
-import java.io.FileInputStream;
-import java.nio.ByteBuffer;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
+import ru.m210projects.Build.filehandle.Entry;
 
-import ru.m210projects.Build.FileHandle.FileEntry;
-import ru.m210projects.Build.FileHandle.Resource;
-import ru.m210projects.Build.FileHandle.Resource.Whence;
+import java.io.InputStream;
 
 public class CRC32 {
-	private static final int[] table = { 0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
+
+	private static final int[] CRC_TABLE = { 0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
 			0xe963a535, 0x9e6495a3, 0x0edb8832, 0x79dcb8a4, 0xe0d5e91e, 0x97d2d988, 0x09b64c2b, 0x7eb17cbd, 0xe7b82d07,
 			0x90bf1d91, 0x1db71064, 0x6ab020f2, 0xf3b97148, 0x84be41de, 0x1adad47d, 0x6ddde4eb, 0xf4d4b551, 0x83d385c7,
 			0x136c9856, 0x646ba8c0, 0xfd62f97a, 0x8a65c9ec, 0x14015c4f, 0x63066cd9, 0xfa0f3d63, 0x8d080df5, 0x3b6e20c8,
@@ -50,7 +46,7 @@ public class CRC32 {
 	public static long getChecksum(byte[] bytes) {
 		int crc = 0xffffffff;
 		for (byte b : bytes) {
-			crc = (crc >>> 8) ^ table[(crc ^ b) & 0xff];
+			crc = (crc >>> 8) ^ CRC_TABLE[(crc ^ b) & 0xff];
 		}
 
 		// flip bits
@@ -59,46 +55,18 @@ public class CRC32 {
 		return crc & 0xFFFFFFFFL;
 	}
 
-	public static long getChecksum(ByteBuffer bb) {
-		int rem;
-		int crc = 0xffffffff;
-		byte[] bytes = new byte[2048];
-
-		while ((rem = bb.remaining()) != 0) {
-			int len = Math.min(rem, bytes.length);
-			bb.get(bytes, 0, len);
-			for (int i = 0; i < len; i++)
-				crc = (crc >>> 8) ^ table[(crc ^ bytes[i]) & 0xff];
-		}
-
-		// flip bits
-		crc = ~crc;
-		return crc & 0xFFFFFFFFL;
-	}
-
-	public static long getChecksum(FileEntry file) {
-		long value = -1;
-		try {
-			FileInputStream inputStream = new FileInputStream(file.getFile());
-			FileChannel fileChannel = inputStream.getChannel();
-			MappedByteBuffer buffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size());
-			value = getChecksum(buffer);
-			inputStream.close();
-		} catch (Exception e) {
-		}
-		return value;
-	}
-
-	public static long getChecksum(Resource res) {
+	public static long getChecksum(Entry res) {
 		int crc = 0xffffffff;
 		int len;
 		byte[] bytes = new byte[2048];
 
-		res.seek(0, Whence.Set);
-		while ((len = res.read(bytes)) != -1) {
-			for (int i = 0; i < len; i++) {
-				crc = (crc >>> 8) ^ table[(crc ^ bytes[i]) & 0xff];
+		try(InputStream is = res.getInputStream()) {
+			while ((len = is.read(bytes)) != -1) {
+				for (int i = 0; i < len; i++) {
+					crc = (crc >>> 8) ^ CRC_TABLE[(crc ^ bytes[i]) & 0xff];
+				}
 			}
+		} catch (Exception ignored) {
 		}
 
 		// flip bits

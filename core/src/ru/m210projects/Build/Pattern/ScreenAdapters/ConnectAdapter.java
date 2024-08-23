@@ -16,24 +16,22 @@
 
 package ru.m210projects.Build.Pattern.ScreenAdapters;
 
-import static ru.m210projects.Build.Engine.xdim;
-import static ru.m210projects.Build.Engine.ydim;
-import static ru.m210projects.Build.Net.Mmulti.connecthead;
-import static ru.m210projects.Build.Net.Mmulti.inet;
-import static ru.m210projects.Build.Net.Mmulti.initmultiplayers;
-import static ru.m210projects.Build.Net.Mmulti.myconnectindex;
-import static ru.m210projects.Build.OnSceenDisplay.Console.OSDTEXT_YELLOW;
-import static ru.m210projects.Build.Strhandler.toCharArray;
+import static ru.m210projects.Build.net.Mmulti.connecthead;
+import static ru.m210projects.Build.net.Mmulti.inet;
+import static ru.m210projects.Build.net.Mmulti.initmultiplayers;
+import static ru.m210projects.Build.net.Mmulti.myconnectindex;
 
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.ScreenAdapter;
 
-import ru.m210projects.Build.Architecture.BuildGdx;
-import ru.m210projects.Build.Architecture.BuildGraphics.Option;
-import ru.m210projects.Build.Architecture.BuildFrame.FrameType;
-import ru.m210projects.Build.OnSceenDisplay.Console;
-import ru.m210projects.Build.Pattern.BuildFont;
-import ru.m210projects.Build.Pattern.BuildFont.TextAlign;
+import ru.m210projects.Build.Render.Renderer;
+import ru.m210projects.Build.Types.ConvertType;
+import ru.m210projects.Build.Types.Transparent;
+import ru.m210projects.Build.Types.font.Font;
+import ru.m210projects.Build.Types.font.TextAlign;
+import ru.m210projects.Build.osd.Console;
 import ru.m210projects.Build.Pattern.BuildGame;
+import ru.m210projects.Build.osd.OsdColor;
 
 public abstract class ConnectAdapter extends ScreenAdapter {
 
@@ -42,13 +40,13 @@ public abstract class ConnectAdapter extends ScreenAdapter {
 	private String[] gNetParam;
 	private int ConnectStep = 0;
 	private final int nTile;
-	private final BuildFont style;
+	private final Font style;
 	
 	public enum NetFlag {
 		Create, Connect
     }
 	
-	public ConnectAdapter(BuildGame game, int nTile, BuildFont style)
+	public ConnectAdapter(BuildGame game, int nTile, Font style)
 	{
 		this.game = game;
 		this.nTile = nTile;
@@ -62,6 +60,7 @@ public abstract class ConnectAdapter extends ScreenAdapter {
 	@Override
 	public void show() {
 		game.pNet.ResetNetwork();
+		game.getProcessor().resetPollingStates();
 		initmultiplayers(gNetParam, 0);
 		ConnectStep = 0;
 	}
@@ -74,68 +73,66 @@ public abstract class ConnectAdapter extends ScreenAdapter {
 
 	@Override
 	public void render(float delta) {
-		game.pEngine.clearview(0);
-		game.pEngine.rotatesprite(160 << 16, 100 << 16, 65536, 0, nTile, 0, 0, 2 | 8 | 64, 0, 0, xdim - 1, ydim - 1);
+		Renderer renderer = game.getRenderer();
+		renderer.clearview(0);
+		renderer.rotatesprite(160 << 16, 100 << 16, 65536, 0, nTile, 0, 0, 2 | 8 | 64);
 
 		switch (gNetFlag) {
 		case Create:
 		case Connect:
 			if (inet.waiting()) {
+				if(game.getProcessor().isKeyPressed(Input.Keys.ESCAPE)) {
+					inet.cancel();
+					return;
+				}
+
 				if (myconnectindex == connecthead) {
-					style.drawText(160, 150, toCharArray("Local IP: " + inet.myip), -128, 0, TextAlign.Center, 2, false);
+					style.drawTextScaled(renderer, 160, 150, "Local IP: " + inet.myip, 1.0f, -128, 0, TextAlign.Center, Transparent.None, ConvertType.Normal, false);
 					if (inet.useUPnP) {
 						String extip = "Public IP: ";
-						if (inet.extip != null)
+						if (inet.extip != null) {
 							extip += inet.extip;
+						}
 
-						style.drawText(160, 160, toCharArray(extip), -128, 0, TextAlign.Center, 2, false);
+						style.drawTextScaled(renderer, 160, 160, extip, 1.0f, -128, 0, TextAlign.Center, Transparent.None, ConvertType.Normal, false);
 					}
 				}
 
-				if (inet.message != null && !inet.message.isEmpty())
-					style.drawText(160, 180, toCharArray(inet.message), -128, 0, TextAlign.Center, 2, false);
-				else
-					style.drawText(160, 180, toCharArray("Initializing..."), -128, 0, TextAlign.Center, 2, false);
+				if (inet.message != null && !inet.message.isEmpty()) {
+					style.drawTextScaled(renderer, 160, 180, inet.message, 1.0f, -128, 0, TextAlign.Center, Transparent.None, ConvertType.Normal, false);
+				} else {
+					style.drawTextScaled(renderer, 160, 180, "Initializing...", 1.0f, -128, 0, TextAlign.Center, Transparent.None, ConvertType.Normal, false);
+				}
 					
-				game.pEngine.nextpage();
+				game.pEngine.nextpage(delta);
 				return;
 			}
 
 			if (inet.netready == 0) {
-				Console.Println(inet.message, OSDTEXT_YELLOW);
+				Console.out.println(inet.message, OsdColor.YELLOW);
 				back();
 				
-				game.pEngine.nextpage();
+				game.pEngine.nextpage(delta);
 				return;
 			}
 
 			if (ConnectStep == 0) {
-				if (inet.message != null)
-					style.drawText(160, 180, toCharArray(inet.message), -128, 0, TextAlign.Center, 2, false);
-				else
-					style.drawText(160, 180, toCharArray("Connected! Waiting for other players..."), -128, 0, TextAlign.Center, 2, false);
+				if (inet.message != null) {
+					style.drawTextScaled(renderer, 160, 180, inet.message, 1.0f, -128, 0, TextAlign.Center, Transparent.None, ConvertType.Normal, false);
+				} else {
+					style.drawTextScaled(renderer, 160, 180, "Connected! Waiting for other players...", 1.0f, -128, 0, TextAlign.Center, Transparent.None, ConvertType.Normal, false);
+				}
 				ConnectStep = 1;
 
 				game.pNet.StartWaiting(5000);
 				
-				game.pEngine.nextpage();
+				game.pEngine.nextpage(delta);
 				return;
 			}
 
 			connect();
 		}
 
-		game.pEngine.nextpage();
-	}
-	
-	@Override
-	public void pause () {
-		if (BuildGdx.graphics.getFrameType() == FrameType.GL) 
-			BuildGdx.graphics.extra(Option.GLDefConfiguration);
-	}
-
-	@Override
-	public void resume () {
-		game.updateColorCorrection();
+		game.pEngine.nextpage(delta);
 	}
 }

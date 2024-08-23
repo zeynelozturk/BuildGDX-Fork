@@ -1,3 +1,19 @@
+// This file is part of BuildGDX.
+// Copyright (C) 2023-2024 Alexander Makarov-[M210] (m210-2007@mail.ru)
+//
+// BuildGDX is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// BuildGDX is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with BuildGDX.  If not, see <http://www.gnu.org/licenses/>.
+
 package ru.m210projects.Build.Render.TextureHandle;
 
 import static com.badlogic.gdx.graphics.GL20.GL_LUMINANCE;
@@ -8,7 +24,7 @@ import static com.badlogic.gdx.graphics.GL20.GL_UNSIGNED_BYTE;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-import ru.m210projects.Build.Types.Tile;
+import ru.m210projects.Build.filehandle.art.ArtEntry;
 
 public class IndexedTileData extends TileData {
 
@@ -17,29 +33,30 @@ public class IndexedTileData extends TileData {
 	public final int width, height;
 	public final boolean clamped;
 
-	public IndexedTileData(Tile tile, boolean clamped, boolean alpha, int expflag) {
-		byte[] data = tile.data;
+	public IndexedTileData(ArtEntry tile, boolean clamped, boolean alpha, int expflag) {
+		byte[] data = tile.getBytes();
 		int tsizx = tile.getWidth();
 		int tsizy = tile.getHeight();
 
-		if (data != null && (data.length == 0 || tile.getSize() > data.length))
+		if (data != null && (data.length == 0 || tile.getSize() > data.length)) {
 			data = null;
+		}
 
 		int xsiz = tsizx;
 		int ysiz = tsizy;
-		if ((expflag & 1) != 0)
+		if ((expflag & 1) != 0) {
 			xsiz = calcSize(tsizx);
-		if ((expflag & 2) != 0)
+		}
+		if ((expflag & 2) != 0) {
 			ysiz = calcSize(tsizy);
+		}
 
 		ByteBuffer buffer = ByteBuffer.allocateDirect(data != null ? xsiz * ysiz : 1).order(ByteOrder.LITTLE_ENDIAN);
 
 		boolean hasalpha = false;
 		if (data == null) {
 			buffer.put(0, (byte) 255);
-			// tsizx = tsizy = 1;
 			hasalpha = true;
-			// if (buffer.getBuffer().capacity() < xsiz * ysiz)
 			xsiz = ysiz = 1;
 		} else {
 			int dptr;
@@ -48,8 +65,9 @@ public class IndexedTileData extends TileData {
 				for (int y = ysiz - 1; y >= 0; y--) {
 					sptr = y >= tsizy ? 0 : tsizx;
 					dptr = (xsiz * y + sptr);
-					for (int x = sptr; x < xsiz; x++)
+					for (int x = sptr; x < xsiz; x++) {
 						buffer.put(dptr++, (byte) 255);
+					}
 				}
 
 				sptr = 0;
@@ -69,11 +87,13 @@ public class IndexedTileData extends TileData {
 					for (j = 0; j < ysiz; j++) {
 						buffer.put(dptr, data[sptr + p++]);
 						dptr += xsiz;
-						if (p >= tsizy)
+						if (p >= tsizy) {
 							p = 0;
+						}
 					}
-					if ((sptr += tsizy) >= len)
+					if ((sptr += tsizy) >= len) {
 						sptr = 0;
+					}
 				}
 			}
 		}
