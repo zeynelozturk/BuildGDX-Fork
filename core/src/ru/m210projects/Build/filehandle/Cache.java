@@ -22,6 +22,7 @@ import ru.m210projects.Build.Types.collections.ListNode;
 import ru.m210projects.Build.filehandle.fs.AbsoluteFileEntry;
 import ru.m210projects.Build.filehandle.fs.Directory;
 import ru.m210projects.Build.filehandle.fs.FileEntry;
+import ru.m210projects.Build.filehandle.fs.NotFoundEntry;
 import ru.m210projects.Build.filehandle.grp.GrpFile;
 import ru.m210projects.Build.filehandle.rff.RffFile;
 import ru.m210projects.Build.filehandle.zip.ZipEntry;
@@ -118,6 +119,7 @@ public class Cache {
                     entry = fileEntry;
                 }
             } catch (IOException ignored) {
+                entry = new NotFoundEntry(path); // #GDX 22.12.2024 to save path
             }
         }
 

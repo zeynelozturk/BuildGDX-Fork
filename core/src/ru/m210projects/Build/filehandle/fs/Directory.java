@@ -22,9 +22,7 @@ import ru.m210projects.Build.filehandle.Group;
 import ru.m210projects.Build.osd.Console;
 import ru.m210projects.Build.osd.OsdColor;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.*;
 import java.util.*;
 
@@ -32,37 +30,7 @@ import static ru.m210projects.Build.filehandle.fs.FileEntry.DUMMY_PATH;
 
 public class Directory implements Group {
 
-    public static final FileEntry DUMMY_ENTRY = new FileEntry(DUMMY_PATH, "dummy", 0) {
-        @Override
-        public InputStream getInputStream() {
-            return new ByteArrayInputStream(new byte[0]);
-        }
-
-        @Override
-        public boolean exists() {
-            return false;
-        }
-
-        @Override
-        public boolean isDirectory() {
-            return false;
-        }
-
-        @Override
-        public Path getRelativePath() {
-            return getPath();
-        }
-
-        @Override
-        public Directory getParent() {
-            return DUMMY_DIRECTORY;
-        }
-
-        @Override
-        public Path getPath() {
-            return DUMMY_PATH;
-        }
-    };
+    public static final FileEntry DUMMY_ENTRY = new NotFoundEntry("dummy");
 
     public static final Directory DUMMY_DIRECTORY = new Directory() {
         @Override

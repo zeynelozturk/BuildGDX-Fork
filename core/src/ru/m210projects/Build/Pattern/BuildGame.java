@@ -209,7 +209,9 @@ public abstract class BuildGame extends Game implements Thread.UncaughtException
 
     @Override
     public void dispose() {
-        pCfg.getMidiDevice().close();
+        if (pCfg.getMidiDevice().isOpen()) { // #GDX 11.10.2024 Close MIDI device only if it opened (fixed javax.sound.midi.MidiUnavailableException: Undefined external error)
+            pCfg.getMidiDevice().close();
+        }
         pCfg.getAudio().dispose();
 
         try (OutputStream os = new FileOutputStream(pCfg.getCfgPath().toFile())) {

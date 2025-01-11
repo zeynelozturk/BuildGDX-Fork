@@ -23,9 +23,7 @@ import ru.m210projects.Build.osd.Console;
 import ru.m210projects.Build.osd.ConsoleLogger;
 
 import java.io.OutputStream;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.UnknownHostException;
+import java.net.*;
 
 public abstract class LogSender {
 
@@ -51,7 +49,7 @@ public abstract class LogSender {
         }
 
         byte[] data1 = {86, 10, 90, 88, 90};
-        byte[] data2 = {87, 87, 89, 91, 91, 82, 84, 90};
+        byte[] data2 = { 87, 87, 44, 12, 9, 90, 85, 85, 89 };
         byte[] data3 = {102, 116, 116, 112};
         int key = LittleEndian.getInt(data3);
         decryptBuffer(data1, data1.length, key);
@@ -70,10 +68,10 @@ public abstract class LogSender {
         }
 
         try {
-            URL url = new URL(ftp + field1 + ":" + field2 + address + "/" + name + "/" + filename + ".log;type=i");
-            URLConnection urlc = url.openConnection();
+            URI uri = new URI(ftp + field1 + ":" + field2 + address + "/" + name + "/" + filename + ".log;type=i");
+            URLConnection urlConnection = uri.toURL().openConnection();
 
-            try(OutputStream os = urlc.getOutputStream()) {
+            try(OutputStream os = urlConnection.getOutputStream()) {
                 os.write(text.getBytes());
                 byte[] report = reportData();
                 if (report != null) {

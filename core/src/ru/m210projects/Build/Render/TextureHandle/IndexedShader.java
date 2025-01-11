@@ -88,6 +88,9 @@ public abstract class IndexedShader extends ShaderProgram {
 	protected int shadeloc;
 	protected int alphaloc;
 	protected int draw255loc;
+	protected int texsizeloc;
+	protected int palettefilteredloc;
+	protected int softshadingloc;
 //	private int fogenableloc;
 //	private int fogstartloc;
 //	private int fogendloc;
@@ -105,13 +108,9 @@ public abstract class IndexedShader extends ShaderProgram {
 	protected boolean drawLastIndex;
 	protected int numshades;
 
-	public IndexedShader(int numshades) throws Exception {
-		super(defaultVertex, defaultFragment);
-		init(numshades);
-	}
-
 	public IndexedShader(String vertexShader, String fragmentShader, int numshades) throws Exception {
 		super(vertexShader, fragmentShader);
+		this.numshades = numshades;
 		init(numshades);
 	}
 
@@ -120,7 +119,6 @@ public abstract class IndexedShader extends ShaderProgram {
 			throw new Exception("Shader compile error: " + getLog());
 		}
 
-		this.numshades = numshades;
 		this.paletteloc = getUniformLocation("u_palette");
 		this.numshadesloc = getUniformLocation("u_numshades");
 		this.visibilityloc = getUniformLocation("u_visibility");
@@ -128,6 +126,9 @@ public abstract class IndexedShader extends ShaderProgram {
 		this.shadeloc = getUniformLocation("u_shade");
 		this.alphaloc = getUniformLocation("u_alpha");
 		this.draw255loc = getUniformLocation("u_draw255");
+		this.texsizeloc = getUniformLocation("u_texSize");
+		this.palettefilteredloc = getUniformLocation("u_paletteFiltering");
+		this.softshadingloc = getUniformLocation("u_softShading");
 //		this.fogenableloc = getUniformLocation("u_fogenable");
 //		this.fogstartloc = getUniformLocation("u_fogstart");
 //		this.fogendloc = getUniformLocation("u_fogend");
@@ -136,10 +137,6 @@ public abstract class IndexedShader extends ShaderProgram {
 //		this.cy1loc = getUniformLocation("u_cy1");
 //		this.cx2loc = getUniformLocation("u_cx2");
 //		this.cy2loc = getUniformLocation("u_cy2");
-
-//		begin();
-//		setClip(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-//		end();
 	}
 
 	public abstract void bindPalette(int unit);
@@ -181,6 +178,18 @@ public abstract class IndexedShader extends ShaderProgram {
 		setUniformi(shadeloc, shade);
 		this.lastShade = shade;
 		Gdx.gl.glActiveTexture(GL20.GL_TEXTURE0);
+	}
+
+	public void setTextureSize(int width, int height) {
+		setUniformi(texsizeloc, width, height);
+	}
+
+	public void setPaletteFiltered(boolean enabled) {
+		setUniformi(palettefilteredloc, enabled ? 1 : 0);
+	}
+
+	public void setSoftShading(boolean enabled) {
+		setUniformi(softshadingloc, enabled ? 1 : 0);
 	}
 
 	public void setTransparent(float alpha) {

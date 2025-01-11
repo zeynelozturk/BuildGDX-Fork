@@ -176,8 +176,8 @@ public class WorldShader {
 			+ "		   discard;" //
 			+ "\n" //
 			+ "    vec4 tex_color = texture2D(u_texture, v_texCoords);\n"
-			+ "    if(tex_color.a == 0.0)\n"	// alpha cut
-			+ "		   discard;" //
+//			+ "    if(tex_color.a == 0.0)\n"	// alpha cut; skip it for ROR and mirrors
+//			+ "		   discard;\n" // broke ROR
 			+ "	   vec4 src = u_color * v_color * tex_color;\n" //
 			+ "	   if(u_fogEnable) {\n" //
 			+ "        gl_FragColor = mix(src, vec4(u_fogColor, 1.0), calcFog((gl_FragCoord.z / gl_FragCoord.w) / 64.0));\n" //

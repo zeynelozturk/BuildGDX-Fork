@@ -99,6 +99,7 @@ public abstract class LwjglLauncherUtil {
                 lwjglConfig.setDecorated(!gameConfig.isBorderless());
                 if (Platform.get() == Platform.MACOSX) {
                     Configuration.GLFW_LIBRARY_NAME.set("glfw_async");
+                    Configuration.GLFW_CHECK_THREAD0.set(false); // 28.12.2024 This fixes a changing of screen resolution on OSX
                 }
 
                 if (icons != null) {

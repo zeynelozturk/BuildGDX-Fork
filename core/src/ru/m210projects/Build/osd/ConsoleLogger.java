@@ -45,6 +45,11 @@ public class ConsoleLogger {
 
     @Override
     public String toString() {
+        try {
+            out.flush(); // #GDX 31.12.2024
+        } catch (IOException ignored) {
+        }
+
         try(InputStream is = Files.newInputStream(path)) {
             byte[] data = new byte[is.available()];
             int len = is.read(data);

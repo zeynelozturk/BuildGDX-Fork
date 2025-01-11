@@ -2,17 +2,18 @@ package com.badlogic.gdx.controllers;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.LifecycleListener;
+import com.badlogic.gdx.utils.Architecture;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.Os;
 import com.badlogic.gdx.utils.SharedLibraryLoader;
+import de.ralleytn.plugins.jinput.xinput.XInputEnvironmentPlugin;
 import net.java.games.input.Controller;
 import net.java.games.input.ControllerEnvironment;
 import net.java.games.input.ControllerEvent;
-import net.java.games.input.DirectAndRawInputEnvironmentPlugin;
 import ru.m210projects.Build.osd.Console;
 import ru.m210projects.Build.osd.OsdColor;
 
 import java.io.File;
-import java.util.Set;
 
 import static com.badlogic.gdx.utils.SharedLibraryLoader.*;
 
@@ -30,11 +31,8 @@ public class JControllerManager extends AbstractControllerManager implements Run
     @Override
     public Array<com.badlogic.gdx.controllers.Controller> getControllers() {
         if (!controllersLoaded) {
-            DirectAndRawInputEnvironmentPlugin directAndRawInputEnvironment = new DirectAndRawInputEnvironmentPlugin();
-            ControllerEnvironment controllerEnvironment;
-            if (directAndRawInputEnvironment.isSupported()) {
-                controllerEnvironment = directAndRawInputEnvironment;
-            } else {
+            ControllerEnvironment controllerEnvironment = new XInputEnvironmentPlugin();
+            if(!controllerEnvironment.isSupported()) {
                 controllerEnvironment = ControllerEnvironment.getDefaultEnvironment();
             }
 
@@ -82,15 +80,15 @@ public class JControllerManager extends AbstractControllerManager implements Run
         SharedLibraryLoader loader = new SharedLibraryLoader();
         File nativesDir = null;
         try {
-            if (isWindows) {
-                nativesDir = loader.extractFile(is64Bit ? "jinput-dx8_64.dll" : "jinput-dx8.dll", null).getParentFile();
-                loader.extractFileTo(is64Bit ? "jinput-raw_64.dll" : "jinput-raw.dll", nativesDir);
-            } else if (isMac) {
+            if (os == Os.Windows) {
+                nativesDir = loader.extractFile(bitness == Architecture.Bitness._64 ? "jinput-dx8_64.dll" : "jinput-dx8.dll", null).getParentFile();
+                loader.extractFileTo(bitness == Architecture.Bitness._64 ? "jinput-raw_64.dll" : "jinput-raw.dll", nativesDir);
+            } else if (os == Os.MacOsX) {
                 nativesDir = loader.extractFile("libjinput-osx.jnilib", null).getParentFile();
-            } else if (isLinux) {
-                nativesDir = loader.extractFile(is64Bit ? "libjinput-linux64.so" : "libjinput-linux.so", null)
+            } else if (os == Os.Linux) {
+                nativesDir = loader.extractFile(bitness == Architecture.Bitness._64 ? "libjinput-linux64.so" : "libjinput-linux.so", null)
                         .getParentFile();
-                loader.extractFileTo(is64Bit ? "libjinput-linux64.so" : "libjinput-linux.so", nativesDir);
+                loader.extractFileTo(bitness == Architecture.Bitness._64 ? "libjinput-linux64.so" : "libjinput-linux.so", nativesDir);
             }
         } catch (Throwable ex) {
             Console.out.println("Unable to extract JInput natives.", OsdColor.RED);
@@ -111,8 +109,8 @@ public class JControllerManager extends AbstractControllerManager implements Run
         Object[] items = controllers.items;
         for (int i = 0; i < size; i++) {
             Object item = items[i];
-            if (item instanceof JController) {
-                ((JController) item).addListener(listener);
+            if (item instanceof AbstractController) {
+                ((AbstractController) item).addListener(listener);
             }
         }
     }
@@ -125,8 +123,8 @@ public class JControllerManager extends AbstractControllerManager implements Run
         Object[] items = controllers.items;
         for (int i = 0; i < size; i++) {
             Object item = items[i];
-            if (item instanceof JController) {
-                ((JController) item).removeListener(listener);
+            if (item instanceof AbstractController) {
+                ((AbstractController) item).removeListener(listener);
             }
         }
     }
@@ -187,26 +185,19 @@ public class JControllerManager extends AbstractControllerManager implements Run
     @Override
     public void controllerAdded(ControllerEvent controllerEvent) {
         final Controller c = controllerEvent.getController();
-        JController controller = new JController(c);
-        controller.addListener(compositeListener);
+        AbstractController controller;
+        if (c.getClass().getSimpleName().equals("XIController")) {
+            controller = new JXController(c);
+        } else {
+            controller = new JController(c);
+        }
+
         compositeListener.connected(controller);
         controllers.add(controller);
     }
 
     public void dispose() {
-        final Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
-        for (final Thread thread : threadSet) {
-            final String name = thread.getClass().getName();
-            if (name.equals("net.java.games.input.RawInputEventQueue$QueueThread")) {
-                long time = System.currentTimeMillis();
-                while (thread.isAlive()) {
-                    thread.interrupt();
-                    if (System.currentTimeMillis() - time >= 300) {
-                        thread.stop(); // Fuck you, just stop!
-                        break;
-                    }
-                }
-            }
-        }
+        // #GDX 02.01.2025 Killing of "net.java.games.input.RawInputEventQueue$QueueThread" is need in case of
+        // rescan controllers, that still doesn't work in JInput. So, it's dead code and can be removed
     }
 }

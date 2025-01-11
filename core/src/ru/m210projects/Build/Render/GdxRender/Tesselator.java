@@ -31,8 +31,11 @@ import ru.m210projects.Build.Render.GLInfo;
 import ru.m210projects.Build.Render.GdxRender.WorldMesh.Heinum;
 import ru.m210projects.Build.Types.Sector;
 import ru.m210projects.Build.Types.Wall;
+import ru.m210projects.Build.Types.collections.LinkedList;
 import ru.m210projects.Build.Types.collections.Pool;
 import ru.m210projects.Build.filehandle.art.ArtEntry;
+import ru.m210projects.Build.osd.Console;
+import ru.m210projects.Build.osd.OsdColor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -188,9 +191,18 @@ public class Tesselator {
             for (i = 0; i < ntrap; i = j + 1) {
                 j = i + 1;
 
-                if ((trapx0.get(j) <= trapx0.get(i)) && (trapx1.get(j) <= trapx1.get(i))) {
+                if (i >= trapx0.size() || j >= trapx0.size()) {
+                    Console.out.println(String.format("Sector %d is corrupt", sectnum), OsdColor.RED);
+                    sec.setAsBroken();
+                    zoids.clear();
+                    return;
+                }
+
+                if ((trapx0.get(j) <= trapx0.get(i))
+                        && (trapx1.get(j) <= trapx1.get(i))) {
                     continue;
                 }
+
                 while ((j + 2 < ntrap) && (trapx0.get(j + 1) <= trapx0.get(j)) && (trapx1.get(j + 1) <= trapx1.get(j))) {
                     j += 2;
                 }

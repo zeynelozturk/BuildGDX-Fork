@@ -133,6 +133,10 @@ public abstract class SoundManager implements Runnable {
     }
 
     public boolean isFreeSource(int sourceIndex) {
+        if (sourceIndex < 0 || sourceIndex >= allSources.length) {
+            return false; // #GDX 31.12.2024
+        }
+
         ManageableSource source = allSources[sourceIndex];
         return source.getPriority() <= FREE_SOURCE_PRIORITY;
     }

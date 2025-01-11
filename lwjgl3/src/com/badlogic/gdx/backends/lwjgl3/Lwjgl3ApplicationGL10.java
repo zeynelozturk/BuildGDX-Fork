@@ -85,9 +85,6 @@ public class Lwjgl3ApplicationGL10 extends Lwjgl3Application {
 
     @Override
     public Lwjgl3Input createInput(Lwjgl3Window window) {
-        if (Platform.get() == Platform.MACOSX) {
-            return new DefaultLwjgl3Input(window);
-        }
         return new RawMouseLwjgl3Input(window);
     }
 

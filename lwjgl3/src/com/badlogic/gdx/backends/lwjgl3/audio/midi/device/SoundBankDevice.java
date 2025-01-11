@@ -86,10 +86,12 @@ public class SoundBankDevice implements MidiDevice.SoundBank {
 
     @Override
     public @Nullable Music newMusic(Entry file) {
-        try {
-            return new LwjglMidiMusicSource(sequencer, file);
-        } catch (IOException | InvalidMidiDataException e) {
-            Console.out.println(e.toString(), OsdColor.RED);
+        if (isOpen()) { // #GDX 11.10.2024 Don't create new MIDI music if device isn't opened
+            try {
+                return new LwjglMidiMusicSource(sequencer, file);
+            } catch (IOException | InvalidMidiDataException e) {
+                Console.out.println(e.toString(), OsdColor.RED);
+            }
         }
         return null;
     }

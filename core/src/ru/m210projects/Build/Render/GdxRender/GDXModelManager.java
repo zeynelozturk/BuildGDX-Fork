@@ -92,6 +92,9 @@ public class GDXModelManager extends ModelManager {
 			@Override
 			public void setTextureParameters(GLTile tile, int pal, int shade, int visibility, float alpha) {
 				if (tile.getPixelFormat() == TileData.PixelFormat.Pal8) {
+					parent.manager.textureSize(tile.getWidth(), tile.getHeight());
+					parent.manager.paletteFiltered(false);
+					parent.manager.softShading(parent.getConfig().getSoftShading());
 					parent.manager.textureTransform(parent.texture_transform.idt(), 0);
 					parent.manager.textureParams8(pal, shade, alpha, true);
 					((IndexedShader) parent.manager.getProgram()).setVisibility((int) (-visibility / 64.0f));

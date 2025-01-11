@@ -734,14 +734,17 @@ public class WorldMesh {
     private int getWallHash(int sectnum, int z) {
         final Sector sec = boardService.getSector(sectnum);
         final Wall wal = boardService.getWall(z);
+        if (sec == null || wal == null) {
+            return 0;
+        }
 
         int hash = 1;
         final int prime = 31;
 
         hash = prime * hash + NumberUtils.floatToIntBits(wal.getX());
         hash = prime * hash + NumberUtils.floatToIntBits(wal.getY());
-        hash = prime * hash + NumberUtils.floatToIntBits(boardService.getWall(wal.getPoint2()).getX());
-        hash = prime * hash + NumberUtils.floatToIntBits(boardService.getWall(wal.getPoint2()).getY());
+        hash = prime * hash + NumberUtils.floatToIntBits(wal.getWall2().getX());
+        hash = prime * hash + NumberUtils.floatToIntBits(wal.getWall2().getY());
         hash = prime * hash + wal.getCstat();
         hash = prime * hash + wal.getXpanning();
         hash = prime * hash + wal.getYpanning();
@@ -752,17 +755,22 @@ public class WorldMesh {
 
         if (wal.isSwapped() && wal.getNextwall() != -1) {
             final Wall swal = boardService.getWall(wal.getNextwall());
-            hash = prime * hash + swal.getCstat();
-            hash = prime * hash + swal.getXpanning();
-            hash = prime * hash + swal.getYpanning();
-            hash = prime * hash + swal.getXrepeat();
-            hash = prime * hash + swal.getYrepeat();
-            hash = prime * hash + swal.getPicnum();
+            if (swal != null) {
+                hash = prime * hash + swal.getCstat();
+                hash = prime * hash + swal.getXpanning();
+                hash = prime * hash + swal.getYpanning();
+                hash = prime * hash + swal.getXrepeat();
+                hash = prime * hash + swal.getYrepeat();
+                hash = prime * hash + swal.getPicnum();
+            }
         }
 
         if (((sec.getCeilingstat() | sec.getFloorstat()) & 2) != 0) {
-            hash = prime * hash + NumberUtils.floatToIntBits(boardService.getWall(sec.getWallptr()).getX());
-            hash = prime * hash + NumberUtils.floatToIntBits(boardService.getWall(sec.getWallptr()).getY());
+            Wall wal2 = boardService.getWall(sec.getWallptr());
+            if (wal2 != null) {
+                hash = prime * hash + NumberUtils.floatToIntBits(wal2.getX());
+                hash = prime * hash + NumberUtils.floatToIntBits(wal2.getY());
+            }
         }
 
         hash = prime * hash + NumberUtils.floatToIntBits(sec.getFloorz());
@@ -775,9 +783,8 @@ public class WorldMesh {
         hash = prime * hash + (sec.isCeilingSlope() ? 1 : 0);
         hash = prime * hash + (sec.isParallaxCeiling() ? 1 : 0);
 
-        if (wal.getNextsector() != -1) {
-            final Sector nsec = boardService.getSector(wal.getNextsector());
-
+        final Sector nsec = boardService.getSector(wal.getNextsector());
+        if (nsec != null) {
             hash = prime * hash + NumberUtils.floatToIntBits(nsec.getFloorz());
             hash = prime * hash + NumberUtils.floatToIntBits(nsec.getFloorheinum());
             hash = prime * hash + (nsec.isFloorSlope() ? 1 : 0);
@@ -789,8 +796,11 @@ public class WorldMesh {
             hash = prime * hash + (nsec.isParallaxCeiling() ? 1 : 0);
 
             if (((nsec.getCeilingstat() | nsec.getFloorstat()) & 2) != 0) {
-                hash = prime * hash + NumberUtils.floatToIntBits(boardService.getWall(nsec.getWallptr()).getX());
-                hash = prime * hash + NumberUtils.floatToIntBits(boardService.getWall(nsec.getWallptr()).getY());
+                Wall wal2 = boardService.getWall(nsec.getWallptr());
+                if (wal2 != null) {
+                    hash = prime * hash + NumberUtils.floatToIntBits(wal2.getX());
+                    hash = prime * hash + NumberUtils.floatToIntBits(wal2.getY());
+                }
             }
         }
 

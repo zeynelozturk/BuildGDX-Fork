@@ -62,7 +62,7 @@ public class AWTMouse implements Mouse, MouseListener {
 
     @Override
     public void setCursorVisible(boolean visible) {
-        window.getWindowHandle().setCursor(!visible ? getTransparentCursor() : null);
+       window.getWindowHandle().setCursor(!visible ? getTransparentCursor() : null);
     }
 
     private Cursor getTransparentCursor() {
@@ -139,7 +139,7 @@ public class AWTMouse implements Mouse, MouseListener {
                     lastX = pointLocation.x;
                     lastY = pointLocation.y;
 
-                    final Component windowHandle = window.getWindowHandle();
+                    final Component windowHandle = window.getGraphics().raster;
                     if (windowHandle.isShowing()) {
                         Point windowLocation = windowHandle.getLocationOnScreen();
                         pointLocation.translate(-windowLocation.x, -windowLocation.y);

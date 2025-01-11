@@ -59,27 +59,33 @@ public class LwjglMidiMusicDevice implements MidiDevice {
 
     @Override
     public boolean isOpen() {
-        return device.isOpen();
+        // #GDX 31.12.2024 Added sequencer != null
+        return device.isOpen() && sequencer != null;
     }
 
     @Override
     public void close() {
-        sequencer.close();
+        // #GDX 31.12.2024 Added sequencer != null
+        if (sequencer != null) {
+            sequencer.close();
+            sequencer = null;
+        }
         device.close();
-        sequencer = null;
     }
 
     @Override
     public void setMasterVolume(float volume) {
-        sequencer.setMasterVolume(volume);
+        sequencer.setMasterVolume(volume);// FIXME:  MIDI IN receiver not available
     }
 
     @Override
     public @Nullable Music newMusic(Entry file) {
-        try {
-            return new LwjglMidiMusicSource(sequencer, file);
-        } catch (IOException | InvalidMidiDataException e) {
-            Console.out.println(e.toString(), OsdColor.RED);
+        if (isOpen()) { // #GDX 11.10.2024 Don't create new MIDI music if device isn't opened
+            try {
+                return new LwjglMidiMusicSource(sequencer, file);
+            } catch (IOException | InvalidMidiDataException e) {
+                Console.out.println(e.toString(), OsdColor.RED);
+            }
         }
         return null;
     }

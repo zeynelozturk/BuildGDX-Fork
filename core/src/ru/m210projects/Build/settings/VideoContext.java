@@ -33,11 +33,13 @@ public class VideoContext implements ConfigContext {
     protected int paletteGamma = 0;
     protected float gFpsScale = 1.0f;
     protected boolean useVoxels = true;
-    protected boolean useHighTiles = false;
-    protected boolean useModels = false;
+    protected boolean useHighTiles = true;
+    protected boolean useModels = true;
     protected boolean widescreen = true;
     protected boolean gShowFPS = true;
     protected TexFilter glfilter = TexFilter.NONE;
+    protected boolean paletteFiltered = false;
+    protected boolean softShading = false;
     protected int gFov = 90;
     protected float fgamma = 1;
     protected boolean paletteEmulation = true;
@@ -51,6 +53,8 @@ public class VideoContext implements ConfigContext {
             gVSync = prop.getBooleanValue("VSync", gVSync);
             fpslimit = Math.max(0, prop.getIntValue("FPSLimit", fpslimit));
             glfilter = TexFilter.valueOf(prop.getIntValue("GLFilterMode", glfilter.ordinal()));
+            paletteFiltered = prop.getBooleanValue("PaletteFiltered", paletteFiltered);
+            softShading = prop.getBooleanValue("SoftShading", softShading);
             widescreen = prop.getBooleanValue("WideScreen", widescreen);
             gFov = Gameutils.BClipRange(prop.getIntValue("FieldOfView", gFov), MINFOV, MAXFOV);
             gFpsScale = Gameutils.BClipRange(prop.getFloatValue("FpsScale", gFpsScale), 0.3f, 10.0f);
@@ -80,6 +84,8 @@ public class VideoContext implements ConfigContext {
             this.widescreen = videoContext.widescreen;
             this.gShowFPS = videoContext.gShowFPS;
             this.glfilter = videoContext.glfilter;
+            this.paletteFiltered = videoContext.paletteFiltered;
+            this.softShading = videoContext.softShading;
             this.gFov = videoContext.gFov;
             this.fgamma = videoContext.fgamma;
             this.paletteEmulation = videoContext.paletteEmulation;
@@ -99,6 +105,8 @@ public class VideoContext implements ConfigContext {
         putBoolean(outputStream, "VSync", gVSync);
         putInteger(outputStream, "FPSLimit", fpslimit);
         putInteger(outputStream, "GLFilterMode", glfilter.ordinal());
+        putBoolean(outputStream, "PaletteFiltered", paletteFiltered);
+        putBoolean(outputStream, "SoftShading", softShading);
         putBoolean(outputStream, "WideScreen", widescreen);
         putInteger(outputStream, "FieldOfView", gFov);
         putFloat(outputStream, "FpsScale", gFpsScale);
@@ -175,6 +183,18 @@ public class VideoContext implements ConfigContext {
 
     public void setTextureFilter(TexFilter textureFilter) {
         this.glfilter = textureFilter;
+    }
+
+    public boolean getPaletteFiltered() { return this.paletteFiltered; }
+
+    public void setPaletteFiltered(boolean enabled) {
+        this.paletteFiltered = enabled;
+    }
+
+    public boolean getSmoothShading() { return this.softShading; }
+
+    public void setSmoothShading(boolean enabled) {
+        this.softShading = enabled;
     }
 
     public boolean isgShowFPS() {

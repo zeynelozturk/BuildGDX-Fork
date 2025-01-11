@@ -629,11 +629,7 @@ public class SpriteRenderer {
                 break;
         }
 
-        if ((orientation & 2) == 0) {
-            Gdx.gl.glDisable(GL_BLEND);
-        } else {
-            Gdx.gl.glEnable(GL_BLEND);
-        }
+        Gdx.gl.glEnable(GL_BLEND); // always render sprites with blending
 
         if (xflip ^ yflip) {
             Gdx.gl.glFrontFace(GL_CCW);

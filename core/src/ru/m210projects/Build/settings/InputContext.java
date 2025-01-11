@@ -135,7 +135,7 @@ public class InputContext implements ConfigContext {
                 break;
             }
 
-            ControllerMapping controllerMapping = new ControllerMapping();
+            ControllerMapping controllerMapping = new ControllerMapping(name);
             for (ControllerAxis axis : ControllerAxis.values()) {
                 int id = prop.getIntValue(axis.name(), -1);
                 if (id != -1) {
@@ -317,7 +317,7 @@ public class InputContext implements ConfigContext {
     }
 
     public ControllerMapping getControllerMapping(String controllerName) {
-        return controllerMappingMap.computeIfAbsent(controllerName.toUpperCase(), e -> new ControllerMapping());
+        return controllerMappingMap.computeIfAbsent(controllerName.toUpperCase(), e -> new ControllerMapping(controllerName));
     }
 
     public void unbindAll(GameKey gameKey) {

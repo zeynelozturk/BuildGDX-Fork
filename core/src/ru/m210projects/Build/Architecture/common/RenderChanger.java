@@ -124,14 +124,9 @@ public abstract class RenderChanger implements ApplicationListener, ApplicationC
 
     @Override
     public void render() {
-        GameProcessor inputProcessor = game.getProcessor();
         Renderer renderer = game.getRenderer();
         game.render();
         renderer.nextpage();
-
-        if (!Console.out.isShowing() && !game.pMenu.isShowing()) {
-            inputProcessor.resetMousePos();
-        }
     }
 
     @Override

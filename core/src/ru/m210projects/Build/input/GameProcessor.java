@@ -194,13 +194,6 @@ public abstract class GameProcessor implements InputListener {
         return null;
     }
 
-    public void resetMousePos() {
-        if (game.isActive()) {
-            Renderer ren = game.getRenderer();
-            Gdx.input.setCursorPosition(ren.getWidth() / 2, ren.getHeight() / 2);
-        }
-    }
-
     public void resetPollingStates() {
         prepareNext();
         Arrays.fill(gameKeyState, false);
@@ -303,7 +296,7 @@ public abstract class GameProcessor implements InputListener {
 
     @Override
     public boolean mouseMoved(int screenX, int screenY) {
-        mouseDelta.add(Gdx.input.getDeltaX(), Gdx.input.getDeltaY());
+        mouseDelta.add(screenX, screenY);
 
         if (mouseDelta.x != 0) {
             GameKey axisKey = game.pCfg.getMouseAxis(mouseDelta.x < 0 ? MouseAxis.LEFT : MouseAxis.RIGHT);
@@ -321,7 +314,7 @@ public abstract class GameProcessor implements InputListener {
 
         InputListener inputListener = getInputListener();
         if (inputListener != null) {
-            return inputListener.mouseMoved(screenX, screenY);
+            return inputListener.mouseMoved(Gdx.input.getX(), Gdx.input.getY());
         }
         return false;
     }
@@ -344,7 +337,7 @@ public abstract class GameProcessor implements InputListener {
         mouseMoved(screenX, screenY);
         InputListener inputListener = getInputListener();
         if (inputListener != null) {
-            return inputListener.touchDragged(screenX, screenY, pointer);
+            return inputListener.touchDragged(Gdx.input.getX(), Gdx.input.getY(), pointer);
         }
         return false;
     }

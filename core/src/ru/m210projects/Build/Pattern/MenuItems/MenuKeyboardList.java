@@ -26,6 +26,7 @@ import ru.m210projects.Build.input.GameKey;
 import ru.m210projects.Build.input.InputListener;
 import ru.m210projects.Build.input.keymap.Keymap;
 import ru.m210projects.Build.settings.GameConfig;
+import ru.m210projects.Build.settings.GameKeys;
 
 import static ru.m210projects.Build.Gameutils.BClipLow;
 import static ru.m210projects.Build.Gameutils.BClipRange;
@@ -122,8 +123,11 @@ public abstract class MenuKeyboardList extends MenuList implements ScrollableMen
     @Override
     public boolean keyDown(int keycode) {
         if (l_set == 1) {
-            if (keycode != Input.Keys.ESCAPE && l_nFocus != -1) {
-                cfg.bindKey(keynames[l_nFocus], keycode);
+            if (l_nFocus != -1) {
+                // #GDX 01.01.2025 ESC key on menu_toggle issue
+                if (GameKeys.Menu_Toggle.equals(keynames[l_nFocus]) || keycode != Input.Keys.ESCAPE) {
+                    cfg.bindKey(keynames[l_nFocus], keycode);
+                }
             }
             l_set = 0;
             return true;

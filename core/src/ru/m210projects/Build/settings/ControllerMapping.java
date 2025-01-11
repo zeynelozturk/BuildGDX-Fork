@@ -17,6 +17,9 @@
 package ru.m210projects.Build.settings;
 
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.controllers.Controller;
+import com.badlogic.gdx.controllers.Controllers;
+import ru.m210projects.Build.input.GameController;
 import ru.m210projects.Build.input.keymap.ControllerAxis;
 import ru.m210projects.Build.input.keymap.ControllerButton;
 
@@ -24,17 +27,70 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+import static ru.m210projects.Build.input.GameKey.UNKNOWN_KEY;
+
 public class ControllerMapping {
 
+    private final String controllerName;
     private final Map<Integer, Integer> buttonMap = new HashMap<>(32);
     private final int[] controllerButtonMap = new int[ControllerButton.values().length];
 
     private final Map<Integer, ControllerAxis> axisMap = new HashMap<>(8);
     private final int[] controllerAxisMap = new int[ControllerAxis.values().length];
 
-    public ControllerMapping() {
+    public ControllerMapping(String controllerName) {
+        this.controllerName = controllerName;
         Arrays.fill(controllerButtonMap, -1);
         Arrays.fill(controllerAxisMap, -1);
+    }
+
+    /**
+     * Find GameController object by controller name
+     * @return GameController or null
+     */
+    private GameController getGameController() {
+        for (Controller controller : Controllers.getControllers()) {
+            if (controller.getName().equalsIgnoreCase(controllerName)) {
+                if (controller instanceof GameController) {
+                    return ((GameController) controller);
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Get controller button name
+     * @param button controller button
+     * @return button name
+     */
+    public String getButtonName(ControllerButton button) {
+        int id = getButtonCode(button);
+        if (id != -1) {
+            GameController controller = getGameController();
+            if (controller != null) {
+                return controller.getButtonName(id);
+            }
+            return "Button_" + id;
+        }
+        return UNKNOWN_KEY.getName();
+    }
+
+    /**
+     * Get controller axis name
+     * @param axis controller axis
+     * @return axis name
+     */
+    public String getAxisName(ControllerAxis axis) {
+        int id = getAxisCode(axis);
+        if (id != -1) {
+            GameController controller = getGameController();
+            if (controller != null) {
+                return controller.getAxisName(id);
+            }
+            return "Axis_" + id;
+        }
+        return UNKNOWN_KEY.getName();
     }
 
     /**

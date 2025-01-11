@@ -24,6 +24,9 @@ import ru.m210projects.Build.osd.OsdColor;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Locale;
 
 public interface Entry extends Comparable<Entry> {
@@ -66,6 +69,19 @@ public interface Entry extends Comparable<Entry> {
             return new byte[0];
         }
         return data;
+    }
+
+    default void save(Path path) {
+        try (InputStream inputStream = getInputStream();
+             OutputStream outputStream = Files.newOutputStream(path)) {
+            int len;
+            byte[] data = new byte[1024];
+            while ((len = inputStream.read(data)) != -1) {
+                outputStream.write(data, 0, len);
+            }
+        } catch (Exception e) {
+            Console.out.println(String.format("Failed to load entry %s: %s", getName(), e), OsdColor.RED);
+        }
     }
 
     default boolean load(EntryLoader loader) {

@@ -17,9 +17,10 @@
 package com.badlogic.gdx.backends.awt;
 
 import com.badlogic.gdx.Input;
-import com.badlogic.gdx.InputEventQueue;
 import com.badlogic.gdx.InputProcessor;
+import com.badlogic.gdx.backends.lwjgl3.RawInputEventQueue;
 import com.badlogic.gdx.graphics.glutils.HdpiMode;
+import com.badlogic.gdx.input.NativeInputConfiguration;
 import com.badlogic.gdx.utils.IntSet;
 import org.lwjgl.system.Platform;
 import ru.m210projects.Build.exceptions.InitializationException;
@@ -35,7 +36,7 @@ public class AWTInput implements Input {
     public static final int MAX_KEYCODE = 255;
     protected final boolean[] pressedKeys;
     protected final boolean[] justPressedKeys;
-    final InputEventQueue eventQueue;
+    final RawInputEventQueue eventQueue;
     final boolean[] justPressedButtons = new boolean[5];
     private final IntSet keysToCatch = new IntSet();
     private final Mouse mouse;
@@ -90,15 +91,33 @@ public class AWTInput implements Input {
         @Override
         public void mouseDragged(MouseEvent e) {
             updateCursorPosition(e.getX(), e.getY());
-            eventQueue.touchDragged(mouseX, mouseY, 0, System.nanoTime());
+            eventQueue.touchDragged(deltaX, deltaY, 0, System.nanoTime());
+            setCursorToCenter(e);
         }
 
         @Override
         public void mouseMoved(MouseEvent e) {
             updateCursorPosition(e.getX(), e.getY());
-            eventQueue.mouseMoved(mouseX, mouseY, System.nanoTime());
+            eventQueue.mouseMoved(deltaX, deltaY, System.nanoTime());
+            setCursorToCenter(e);
+        }
+
+        private void setCursorToCenter(MouseEvent e) {
+            // #GDX 28.12.2024 Return mouse cursor to screen center
+            if (caught && window.focused /*&& window.activated*/) {
+                Component windowHandle = window.getWindowHandle();
+                if (windowHandle.isShowing()) {
+                    int centerX = window.getGraphics().getWidth() / 2;
+                    int centerY = window.getGraphics().getHeight() / 2;
+                    // to avoid recursion
+                    if (e.getX() != centerX || e.getY() != centerY) {
+                        setCursorPosition(centerX, centerY);
+                    }
+                }
+            }
         }
     };
+
     MouseAdapter mouseButtonCallback = new MouseAdapter() {
         private int toGdxButton(int button) {
             if (button == 1) return Buttons.LEFT;
@@ -166,16 +185,16 @@ public class AWTInput implements Input {
         this.window = window;
         this.pressedKeys = new boolean[MAX_KEYCODE + 1];
         this.justPressedKeys = new boolean[MAX_KEYCODE + 1];
-        this.eventQueue = new InputEventQueue();
+        this.eventQueue = new RawInputEventQueue();
         this.buttonCount = MouseInfo.getNumberOfButtons();
         this.mouse = createMouse(window);
 
         resetPollingStates();
         window.getWindowHandle().setFocusTraversalKeysEnabled(false);
         window.getWindowHandle().addKeyListener(keyCallback);
-        window.getWindowHandle().addMouseListener(mouseButtonCallback);
-        window.getWindowHandle().addMouseMotionListener(cursorPosCallback);
-        window.getWindowHandle().addMouseWheelListener(mouseButtonCallback);
+        window.getGraphics().raster.addMouseListener(mouseButtonCallback);
+        window.getGraphics().raster.addMouseMotionListener(cursorPosCallback);
+        window.getGraphics().raster.addMouseWheelListener(mouseButtonCallback);
     }
 
     private Mouse createMouse(AWTWindow window) {
@@ -195,8 +214,8 @@ public class AWTInput implements Input {
             y = mouseY;
         }
 
-        deltaX += (x - logicalMouseX);
-        deltaY += (y - logicalMouseY);
+        deltaX = (x - logicalMouseX);
+        deltaY = (y - logicalMouseY);
 
         mouseX = logicalMouseX = x;
         mouseY = logicalMouseY = y;
@@ -254,6 +273,8 @@ public class AWTInput implements Input {
             keyJustPressed = false;
             Arrays.fill(justPressedKeys, false);
         }
+        deltaX = 0;
+        deltaY = 0;
     }
 
     @Override
@@ -276,9 +297,7 @@ public class AWTInput implements Input {
 
     @Override
     public int getDeltaX() {
-        int result = deltaX;
-        deltaX = 0;
-        return result;
+        return deltaX;
     }
 
     @Override
@@ -301,9 +320,7 @@ public class AWTInput implements Input {
 
     @Override
     public int getDeltaY() {
-        int result = deltaY;
-        deltaY = 0;
-        return result;
+        return deltaY;
     }
 
     @Override
@@ -372,26 +389,6 @@ public class AWTInput implements Input {
     }
 
     @Override
-    public boolean isCatchBackKey() {
-        return keysToCatch.contains(Keys.BACK);
-    }
-
-    @Override
-    public void setCatchBackKey(boolean catchBack) {
-        setCatchKey(Keys.BACK, catchBack);
-    }
-
-    @Override
-    public boolean isCatchMenuKey() {
-        return keysToCatch.contains(Keys.MENU);
-    }
-
-    @Override
-    public void setCatchMenuKey(boolean catchMenu) {
-        setCatchKey(Keys.MENU, catchMenu);
-    }
-
-    @Override
     public void setCatchKey(int keycode, boolean catchKey) {
         if (!catchKey) {
             keysToCatch.remove(keycode);
@@ -456,7 +453,7 @@ public class AWTInput implements Input {
 
     @Override
     public void setCursorPosition(int x, int y) {
-        Component windowHandle = window.getWindowHandle();
+        Component windowHandle = window.getGraphics().raster;
         if (!windowHandle.isShowing()) {
             return;
         }
@@ -469,8 +466,10 @@ public class AWTInput implements Input {
             y = (int) (y * yScale);
         }
 
-        mouseX = logicalMouseX = x;
-        mouseY = logicalMouseY = y;
+        logicalMouseX = x;
+        logicalMouseY = y;
+        updateCursorPosition(x, y);
+
         x += windowLocation.x;
         y += windowLocation.y;
 
@@ -724,6 +723,21 @@ public class AWTInput implements Input {
 
     @Override
     public void setOnscreenKeyboardVisible(boolean visible, OnscreenKeyboardType type) {
+
+    }
+
+    @Override
+    public void openTextInputField(NativeInputConfiguration configuration) {
+
+    }
+
+    @Override
+    public void closeTextInputField(boolean sendReturn) {
+
+    }
+
+    @Override
+    public void setKeyboardHeightObserver(KeyboardHeightObserver observer) {
 
     }
 

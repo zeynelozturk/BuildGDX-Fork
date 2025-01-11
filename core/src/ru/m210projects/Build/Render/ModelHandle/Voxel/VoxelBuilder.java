@@ -88,6 +88,13 @@ public class VoxelBuilder {
 	private final Tile texture;
 	private final int vertexSize;
 
+	public static final byte FILL_COLOR = (byte) 0;
+	public static final int MARGIN_SIZE = 0;
+
+	// TODO: fill margin pixels by adjacent colors and debug texture size
+//	public static final byte FILL_COLOR = (byte) 255;
+//	public static final int MARGIN_SIZE = 1;
+
 	public VoxelBuilder(VoxelData vox, int voxmip) {
 		vertices = new FloatArray();
 		indices = new ShortArray();
@@ -666,6 +673,7 @@ public class VoxelBuilder {
 					quad[vx] = new Rectangle();
 				}
 				mytex = new byte[mytexx * mytexy];
+				Arrays.fill(mytex, FILL_COLOR);
 			}
 		}
 	}
@@ -673,8 +681,16 @@ public class VoxelBuilder {
 	private int isrectfree(int x0, int y0, int dx, int dy) {
 		int i, c, m, m1, x;
 
+		x0 -= MARGIN_SIZE;
+		y0 -= MARGIN_SIZE;
+
 		i = y0 * mytexo5 + (x0 >> 5);
-		dx += x0 - 1;
+
+		if (i < 0 || i >= zbit.length)
+			return (0);
+
+		dx += x0 - 1 + MARGIN_SIZE;
+		dy += MARGIN_SIZE;
 
 		c = (dx >> 5) - (x0 >> 5);
 		m = ~pow2m1[x0 & 31];

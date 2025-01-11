@@ -489,7 +489,7 @@ public abstract class MenuSlotList extends MenuList implements InputListener {
 
         if (saveList) {
             if (!prompt.isCaptured()) {
-                if (l_nFocus != 0) {
+                if (l_nFocus > 0 && l_nFocus < displayed.size()) { //#GDX 11.10.2024 Crash fix when delete all save files and trying to save new one
                     prompt.setTextInput(displayed.get(l_nFocus - 1).name);
                 }
                 prompt.setCaptureInput(true);

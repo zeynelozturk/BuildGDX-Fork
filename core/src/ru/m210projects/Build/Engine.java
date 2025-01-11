@@ -28,11 +28,40 @@ import static ru.m210projects.Build.net.Mmulti.*;
 public class Engine {
 
     /*
+     * Changes v1.18
+     * Bilinear filtration for palette emulation mode
+     * Palette emulation soft shading option
+     * XInput gamepads support (windows only)
+     * Update libgdx to version 1.13.0, jinput to 2.0.10, lwjgl to 3.3.3
+     * Rebind "ESC" in keys configurations is fixed for menu_toggle func
+     * Mouse sensitive option is textfield now (instead of slider from 0 to 2)
+     * Set "useHighTiles" and "useModels" parameters back to true by default when new config is created (affect on skyboxes)
+     * Crash fix when delete all save files and trying to save new one (Index -2 out of bounds for length 0 MenuSlotList.onEnter(MenuSlotList.java:493)
+     * Crash fix when game has 1 demo with "randomly" playback mode (FatalError: IndexOutOfBoundsException[BuildGame]: Index -1 out of bounds for length 1)
+     * Crash fix in Polygdx renderer when load map with broken sectors (ru.m210projects.Build.Render.GdxRender.Tesselator.initZoids(Tesselator.java:191))
+     * Midi isOpen() now checks sequencer to fix exception: javax.sound.midi.MidiUnavailableException: MIDI IN receiver not available
+     * Software renderer set resolution check (resolutions bigger than 4096x3072 isn't supported)
+     *
+     * OSX sky rendering is fixed
+     * OSX resolution changing is fixed
+     * Changed input method algorithm (attempt to fix OSX input)
+     * BloodGDX:
+     *      Fixed loading extra data in savegame files (after remove support of old dos saves)
+     * DukeGDX:
+     *      Improved con addon finding (when definevolumename is not defined, but definelevelname is)
+     *      DK / RR setMapInfo index protect
+     *      DK / RR genspriteremaps() corrupted lookup.dat doesn't close the port now
+     *      DK / RR sndPlayMusic with oggmusic crash fix
+     * TekwarGDX:
+     *      Fixed crash: ru.m210projects.Tekwar.Teksnd.playCDtrack(Teksnd.java:183)
+     * WangGDX:
+     *      Leave vehicle fix in map2
+     * LSPGDX:
+     *      Show exits on automap doesn't crash the game when not in a game mode
+     *
      * TODO:
      * сделать менеджер сохранений - много общего кода, lsReadLoadData не static lsinfo
      * Сделать AudioEntry, который содержит SoundData и используется для кэширования newSound
-     * OSX skyshader doesnt render correctly
-     * OSX GL change resolution fails
      * настройки консоли в меню
      * бесконечные тайлы для рендера. убрать maxtiles
      * RenderingType delete indexes
@@ -42,6 +71,8 @@ public class Engine {
      *      mve video support
      *      as I said once, you cannot pickup a weapon if you already have it (in MP?)
      * DukeGDX (OK++):
+     *      autoaim won't disable in DukeME with 1.17.
+     *      Let´s add Duke!Zone II to the Official Addons List xD
      *      One test I've found is shooting a rocket at a wall to kill Duke. The red background will gradually fade from the beginning with the software renderer, while it'll stay for just a bit longer before fading with Polymost
      *      defscript command to play anmfiles before an episode starts
      *      Check WT music/sound. Why music loaded from WT music folder if there is music addon in autoload folder
@@ -90,7 +121,7 @@ public class Engine {
      * floor-alignment voxels for maphack
      */
 
-    public static final String version = "24.081"; // XX. - year, XX - month, X - build
+    public static final String version = "25.011"; // XX. - year, XX - month, X - build
     public static final int CLIPMASK0 = (((1) << 16) + 1);
     public static final int CLIPMASK1 = (((256) << 16) + 64);
     public static final int MAXPSKYTILES = 256;

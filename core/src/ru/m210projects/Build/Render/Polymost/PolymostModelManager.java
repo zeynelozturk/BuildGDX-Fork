@@ -93,6 +93,9 @@ public class PolymostModelManager extends ModelManager {
                         parent.getShader().bind();
                     }
                     parent.getShader().setTextureParams(pal, shade);
+                    parent.getShader().setTextureSize(tile.getWidth(), tile.getHeight());
+                    parent.getShader().setPaletteFiltered(false);
+                    parent.getShader().setSoftShading(parent.getConfig().getSoftShading());
                     parent.getShader().setDrawLastIndex(true);
                     parent.getShader().setTransparent(alpha);
                     parent.getShader().setVisibility(visibility);

@@ -41,6 +41,7 @@ import ru.m210projects.Build.settings.GameConfig;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.Arrays;
 
 import static ru.m210projects.Build.net.Mmulti.uninitmultiplayer;
 import static ru.m210projects.Build.filehandle.CacheResourceMap.CachePriority.NORMAL;
@@ -90,7 +91,8 @@ public class InitScreen extends ScreenAdapter {
             DialogUtil.showMessage("Build Engine Initialization Error!",
             String.format("There was a problem initialising the Build engine:\r\n%s\r\nat %s", e, e.getStackTrace()[0]),
             MessageType.Info);
-            System.exit(1);
+
+            forceExit("Build Engine Initialization Error! " + String.format("There was a problem initialising the Build engine:\r\n%s\r\nat %s", e, e.getStackTrace()[0]));
             return;
         }
 
@@ -98,7 +100,8 @@ public class InitScreen extends ScreenAdapter {
             DialogUtil.showMessage("Build Engine Initialization Error!",
                     "ART files not found " + gameDirectory.getPath().resolve(engine.getTileManager().getTilesPath()),
                     MessageType.Info);
-            System.exit(1);
+
+            forceExit("ART files not found " + gameDirectory.getPath().resolve(engine.getTileManager().getTilesPath()));
             return;
         }
 
@@ -131,27 +134,26 @@ public class InitScreen extends ScreenAdapter {
             } catch (InitializationException ie) {
                 ie.printStackTrace();
 
-                Console.out.println(ie.getMessage(), OsdColor.RED);
                 DialogUtil.showMessage("Initialization exception!", ie.getMessage(), MessageType.Info);
-                System.exit(1);
+
+                forceExit("Initialization exception! " + ie.getMessage() + " " + Arrays.toString(ie.getStackTrace()));
             } catch (OutOfMemoryError me) {
                 me.printStackTrace();
 
                 String message = "Memory used: [ " + MemLog.used() + " / " + MemLog.total()
                         + " mb ] \r\nPlease, increase the java's heap size.";
-                Console.out.println(message, OsdColor.RED);
                 DialogUtil.showMessage("OutOfMemory!", message, MessageType.Info);
-                System.exit(1);
+
+                forceExit(message);
             } catch (FileNotFoundException fe) {
                 fe.printStackTrace();
                 String message = fe.toString();
-                Console.out.println(message, OsdColor.RED);
                 DialogUtil.showMessage("File not found!", message, MessageType.Info);
-                System.exit(1);
+
+                forceExit("File not found! " + message);
             } catch (Throwable e) {
                 if (!disposing) {
                     game.ThrowError("InitScreen error " + "[" + e.getClass().getSimpleName() + "]: ", e.getStackTrace());
-                    System.exit(1);
                 }
             }
         });
@@ -284,5 +286,11 @@ public class InitScreen extends ScreenAdapter {
             }
             Console.out.draw();
         }
+    }
+
+    private void forceExit(String consoleMessage) {
+        Console.out.println(consoleMessage, OsdColor.RED);
+        Console.out.getLogger().close();
+        System.exit(1);
     }
 }

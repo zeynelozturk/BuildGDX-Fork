@@ -1294,6 +1294,10 @@ public class GDXOrtho extends OrphoRenderer {
         lastTexture = texture;
         invTexWidth = 1.0f / texture.getWidth();
         invTexHeight = 1.0f / texture.getHeight();
+
+        manager.textureSize(texture.getWidth(), texture.getHeight());
+        manager.paletteFiltered(parent.getConfig().getPaletteFiltered());
+        manager.softShading(parent.getConfig().getSoftShading());
     }
 
     protected void setColor(float r, float g, float b, float a) {

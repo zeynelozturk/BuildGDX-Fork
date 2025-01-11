@@ -166,6 +166,12 @@ public class Sector {
         return (getFloorstat() & (128 | 256)) != 0;
     }
 
+    public void setAsBroken() {
+        this.setWallnum(0);
+        this.setWallptr(0);
+        this.setWallList(new LinkedList<>());
+    }
+
     public Sector readObject(InputStream is) throws IOException {
         setWallptr(StreamUtils.readShort(is));
         setWallnum(StreamUtils.readShort(is));

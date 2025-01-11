@@ -49,6 +49,7 @@ public class ShaderManager {
     private int world_plane1;
     private int world_transform;
     private int world_texture_transform;
+    private int world_texSize;
     private int world32_texture_transform;
     private int world32_color;
     private int palette_numshades;
@@ -422,12 +423,51 @@ public class ShaderManager {
         }
     }
 
-    public void color(Shader shader, float r, float g, float b) {
+    public void textureSize(int width, int height) {
+        Shader shader = this.getShader();
+
+        switch (shader) {
+            case IndexedWorldShader:
+                texshader.setTextureSize(width, height);
+                break;
+            case IndexedSkyShader:
+                skyshader.setTextureSize(width, height);
+                break;
+        }
+    }
+
+    public void paletteFiltered(boolean enabled) {
+        Shader shader = this.getShader();
+
+        switch (shader) {
+            case IndexedWorldShader:
+                texshader.setPaletteFiltered(enabled);
+                break;
+            case IndexedSkyShader:
+                skyshader.setPaletteFiltered(enabled);
+                break;
+        }
+    }
+
+    public void softShading(boolean enabled) {
+        Shader shader = this.getShader();
+
+        switch (shader) {
+            case IndexedWorldShader:
+                texshader.setSoftShading(enabled);
+                break;
+            case IndexedSkyShader:
+                //skyshader.setSoftShading(enabled);
+                break;
+        }
+    }
+
+    public void color(Shader shader, float r, float g, float b, float a) {
         check(shader);
 
         switch (shader) {
             case RGBWorldShader:
-                texshader32.setUniformf("u_color", r, g, b);
+                texshader32.setUniformf(world32_color, r, g, b, a);
                 break;
         }
     }
@@ -437,7 +477,7 @@ public class ShaderManager {
 
         switch (shader) {
             case RGBWorldShader:
-                texshader32.setUniformf("u_color", r, g, b, a);
+                texshader32.setUniformf(world32_color, r, g, b, a);
                 break;
         }
     }
@@ -539,7 +579,7 @@ public class ShaderManager {
             this.textureParams8(sh, 0, 0, 0, false);
             this.fog(sh, false, 0, 0, 0, 0, 0);
             this.viewport(sh, 0, 0, 0, 0);
-            this.color(sh, 0, 0, 0);
+            this.color(sh, 0, 0, 0, 0);
             this.mirror(sh, false);
         }
 
@@ -620,7 +660,10 @@ public class ShaderManager {
 
     public IndexedShader allocIndexedShader(final TextureManager textureCache) {
         try {
-            IndexedShader shader = new IndexedShader(WorldShader.vertex, WorldShader.fragment, palette_numshades) {
+            IndexedShader shader = new IndexedShader(
+                    Gdx.files.classpath("ru/m210projects/Build/Render/GdxRender/Shaders/world_vertex.glsl").readString(),
+                    Gdx.files.classpath("ru/m210projects/Build/Render/GdxRender/Shaders/world_fragment.glsl").readString(),
+                    palette_numshades) {
                 @Override
                 public void bindPalette(int unit) {
                     Gdx.gl.glActiveTexture(unit);

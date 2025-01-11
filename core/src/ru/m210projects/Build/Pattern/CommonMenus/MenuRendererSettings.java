@@ -44,6 +44,8 @@ public abstract class MenuRendererSettings extends BuildMenuList {
     protected MenuConteiner fpsLimits;
     protected DummyItem separator;
     protected MenuConteiner GLTextureFilter;
+    protected MenuSwitch GLPaletteFiltered;
+    protected MenuSwitch GLSoftShading;
     protected MenuSwitch GLUseHighTile;
     protected MenuSwitch GLUseModels;
     protected MenuButton GLHires;
@@ -174,9 +176,13 @@ public abstract class MenuRendererSettings extends BuildMenuList {
                 }
             };
             GLTextureFilter = BuildConteiner("Texture filtering", new TextureFilterSettingsProvider(app.pCfg));
+            GLPaletteFiltered = BuildSwitch("Palette mode filtering", new PaletteFilteredSettingsProvider(app.pCfg));
+            GLSoftShading = BuildSwitch("Palette mode soft shading", new SoftShadingSettingsProvider(app.pCfg));
             GLUseHighTile = BuildSwitch("True color textures", new UseHighTileSettingsProvider(app.pCfg));
             GLUseModels = BuildSwitch("3d models", new UseModelsSettingsProvider(app.pCfg));
             GLHiresMenu.addItem(GLTextureFilter, true);
+            GLHiresMenu.addItem(GLPaletteFiltered, false);
+            GLHiresMenu.addItem(GLSoftShading, false);
             GLHiresMenu.addItem(GLUseHighTile, false);
             GLHiresMenu.addItem(GLUseModels, false);
         }
@@ -211,6 +217,42 @@ public abstract class MenuRendererSettings extends BuildMenuList {
         int getMaxValue();
 
         int getStep();
+    }
+
+    private static class PaletteFilteredSettingsProvider implements SettingsProvider<Boolean> {
+        private final GameConfig config;
+
+        public PaletteFilteredSettingsProvider(GameConfig config) {
+            this.config = config;
+        }
+
+        @Override
+        public Boolean getValue() {
+            return config.getPaletteFiltered();
+        }
+
+        @Override
+        public void setValue(Boolean value) {
+            config.setPaletteFiltered(value);
+        }
+    }
+
+    private static class SoftShadingSettingsProvider implements SettingsProvider<Boolean> {
+        private final GameConfig config;
+
+        public SoftShadingSettingsProvider(GameConfig config) {
+            this.config = config;
+        }
+
+        @Override
+        public Boolean getValue() {
+            return config.getSoftShading();
+        }
+
+        @Override
+        public void setValue(Boolean value) {
+            config.setSoftShading(value);
+        }
     }
 
     private static class UseHighTileSettingsProvider implements SettingsProvider<Boolean> {

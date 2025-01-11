@@ -410,6 +410,9 @@ public class Polymost extends AbstractRenderer implements PaletteListener, World
                 alpha = 0.01f; // Hack to update Z-buffer for invalid mirror textures
             }
 
+            texshader.setTextureSize(tile.getWidth(), tile.getHeight());
+            texshader.setPaletteFiltered(config.getPaletteFiltered());
+            texshader.setSoftShading(config.getSoftShading());
             texshader.setDrawLastIndex((method & 3) == 0 || !textureCache.alphaMode(method));
             texshader.setTransparent(alpha);
         } else {
@@ -4095,7 +4098,11 @@ public class Polymost extends AbstractRenderer implements PaletteListener, World
                 return null;
             }
 
-            return new IndexedShader(engine.getPaletteManager().getShadeCount()) {
+            return new IndexedShader(
+                    Gdx.files.classpath("ru/m210projects/Build/Render/Polymost/shaders/vertex.glsl").readString(),
+                    Gdx.files.classpath("ru/m210projects/Build/Render/GdxRender/Shaders/world_fragment.glsl").readString(),
+                    //Gdx.files.classpath("ru/m210projects/Build/Render/Polymost/shaders/fragment.glsl").readString(),
+                    engine.getPaletteManager().getShadeCount()) {
                 @Override
                 public void bindPalette(int unit) {
                     Gdx.gl.glActiveTexture(unit);

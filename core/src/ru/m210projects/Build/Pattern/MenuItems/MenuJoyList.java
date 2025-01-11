@@ -36,7 +36,6 @@ import java.util.List;
 
 import static ru.m210projects.Build.Gameutils.BClipLow;
 import static ru.m210projects.Build.Gameutils.BClipRange;
-import static ru.m210projects.Build.input.GameKey.UNKNOWN_KEY;
 
 public class MenuJoyList extends MenuList implements ScrollableMenuItem, InputListener {
 
@@ -81,19 +80,13 @@ public class MenuJoyList extends MenuList implements ScrollableMenuItem, InputLi
 
             ControllerMapping mapping = cfg.getControllerMapping(cfg.getControllerName());
             String name = components.get(i);
-            String componentName = UNKNOWN_KEY.getName();
+            String componentName;
             if (i < 4) {
                 ControllerAxis axis = getAxis(name);
-                int id = mapping.getAxisCode(axis);
-                if (id != -1) {
-                    componentName = "Axis_" + id;
-                }
+                componentName = mapping.getAxisName(axis);
             } else {
                 ControllerButton button = getButton(name);
-                int id = mapping.getButtonCode(button);
-                if (id != -1) {
-                    componentName = "Button_" + id;
-                }
+                componentName = mapping.getButtonName(button);
             }
 
             if (i == l_nFocus) {
@@ -183,7 +176,7 @@ public class MenuJoyList extends MenuList implements ScrollableMenuItem, InputLi
 
     @Override
     public boolean axisMoved(Controller controller, int axisCode, float value) {
-        if (l_set == 1 && l_nFocus < 4 && value >= 0.5f) {
+        if (l_set == 1 && l_nFocus < 4 && Math.abs(value) >= 0.5f) {
             ControllerMapping mapping = cfg.getControllerMapping(controller.getName());
             ControllerAxis axis = getAxis(components.get(l_nFocus));
             if (axis != ControllerAxis.NULL) {

@@ -18,20 +18,15 @@ package ru.m210projects.Build.Pattern.CommonMenus;
 
 import ru.m210projects.Build.Gameutils;
 import ru.m210projects.Build.Pattern.BuildGame;
-import ru.m210projects.Build.Pattern.MenuItems.BuildMenu;
-import ru.m210projects.Build.Pattern.MenuItems.MenuButton;
-import ru.m210projects.Build.Pattern.MenuItems.MenuConteiner;
-import ru.m210projects.Build.Pattern.MenuItems.MenuHandler;
-import ru.m210projects.Build.Pattern.MenuItems.MenuItem;
-import ru.m210projects.Build.Pattern.MenuItems.MenuProc;
-import ru.m210projects.Build.Pattern.MenuItems.MenuSlider;
-import ru.m210projects.Build.Pattern.MenuItems.MenuSwitch;
-import ru.m210projects.Build.Pattern.MenuItems.MenuTitle;
+import ru.m210projects.Build.Pattern.MenuItems.*;
 import ru.m210projects.Build.Pattern.MenuItems.MenuHandler.MenuOpt;
 import ru.m210projects.Build.settings.MouseAxis;
 import ru.m210projects.Build.settings.GameConfig;
 import ru.m210projects.Build.Types.font.Font;
 import ru.m210projects.Build.input.GameKey;
+
+import static ru.m210projects.Build.Pattern.MenuItems.MenuTextField.NUMBERS;
+import static ru.m210projects.Build.Pattern.MenuItems.MenuTextField.POINT;
 
 public abstract class MenuMouse extends BuildMenu {
 	
@@ -40,7 +35,7 @@ public abstract class MenuMouse extends BuildMenu {
 	public MenuSwitch mEnable;
 	public MenuSwitch mMenuEnab;
 	public MenuSwitch mRawInput;
-	public MenuSlider mSens;
+	public MenuTextField mSens;
 	public MenuSlider mTurn;
 	public MenuSlider mLook;
 	public MenuSlider mMove;
@@ -97,15 +92,19 @@ public abstract class MenuMouse extends BuildMenu {
 		mRawInput.pal = buttonPal;
 		
 		posy += separatorHeight;
-		mSens = new MenuSlider(app.pSlider, "Mouse Sensitivity", style, posx, posy += menuHeight, width, cfg.getSensitivity(), 0x1000,
-				0x28000, 4096, new MenuProc() {
-					@Override
-					public void run(MenuHandler handler, MenuItem pItem) {
-						MenuSlider slider = (MenuSlider) pItem;
-						cfg.setgSensitivity(slider.value);
-					}
-				}, true);
-		mSens.digitalMax = 65536f;
+		mSens = new MenuTextField("Mouse Sensitivity", "", style, posx, posy += menuHeight, width,
+				NUMBERS | POINT, (handler, pItem) -> {
+			MenuTextField item = (MenuTextField) pItem;
+			String numbers = item.getText();
+			double mouseSens = Double.parseDouble(numbers);
+
+			cfg.setgSensitivity((int) (mouseSens * 65536.0f));
+		}) {
+			@Override
+			public void open() {
+				setText("" + (cfg.getSensitivity() / 65536.0f));
+			}
+		};
 		mSens.pal = buttonPal;
 
 		mTurn = new MenuSlider(app.pSlider, "Turning speed", style, posx, posy += menuHeight, width, cfg.getgMouseTurnSpeed(), 0,

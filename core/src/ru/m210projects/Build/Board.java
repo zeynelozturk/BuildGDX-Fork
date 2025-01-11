@@ -53,16 +53,19 @@ public class Board {
                 Wall wal = getWall(i);
                 Wall wal2;
                 if (wal == null || (wal2 = getWall(wal.getPoint2())) == null) {
-                    Console.out.println(String.format("Sector %d has corrupt contour", s), OsdColor.RED);
-                    sec.setWallnum(0);
-                    sec.setWallptr(0);
                     wallList = new LinkedList<>();
                     break;
                 }
                 wal.setWall2(wal2);
                 wallList.addLast(wal.buildNode(i));
             }
-            sec.setWallList(wallList);
+
+            if (wallList.getSize() >= 3) {
+                sec.setWallList(wallList);
+            } else {
+                Console.out.println(String.format("Sector %d has corrupt contour", s), OsdColor.RED);
+                sec.setAsBroken();
+            }
         }
     }
 

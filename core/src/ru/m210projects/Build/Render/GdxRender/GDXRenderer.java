@@ -121,6 +121,8 @@ public class GDXRenderer extends AbstractRenderer implements PaletteListener, Wo
     private float glox1, gloy1, glox2, gloy2;
     private Mesh fadeMesh;
 
+    private float ALPHA_CUT_DISABLE = 0.01f;
+
     public GDXRenderer(GameConfig config) {
         super(config);
         this.config.setVideoContext(new GDXVideoContext(this));
@@ -1272,10 +1274,13 @@ public class GDXRenderer extends AbstractRenderer implements PaletteListener, Wo
         }
 
         if (!artEntry.exists()) {
-            alpha = 0.01f; // Hack to update Z-buffer for invalid mirror textures
+            alpha = ALPHA_CUT_DISABLE; // Hack to update Z-buffer for invalid mirror textures
         }
 
         if (tile.getPixelFormat() == TileData.PixelFormat.Pal8) {
+            manager.textureSize(tile.getWidth(), tile.getHeight());
+            manager.paletteFiltered(config.getPaletteFiltered());
+            manager.softShading(config.getSoftShading());
             manager.textureTransform(texture_transform.idt(), 0);
             manager.textureParams8(pal, shade, alpha, (method & 3) == 0 || !textureCache.alphaMode(method));
         } else {

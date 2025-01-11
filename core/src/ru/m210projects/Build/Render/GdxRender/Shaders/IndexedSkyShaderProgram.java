@@ -16,6 +16,7 @@
 
 package ru.m210projects.Build.Render.GdxRender.Shaders;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Matrix4;
 import ru.m210projects.Build.Render.GdxRender.BuildCamera;
 import ru.m210projects.Build.Render.TextureHandle.IndexedShader;
@@ -28,21 +29,14 @@ public abstract class IndexedSkyShaderProgram extends IndexedShader {
     protected int mirrorloc;
 
     public IndexedSkyShaderProgram(int numshades) throws Exception {
-        super(SkyShader.vertex, SkyShader.fragment, numshades);
+        super(Gdx.files.classpath("ru/m210projects/Build/Render/GdxRender/Shaders/sky_vertex.glsl").readString(),
+                Gdx.files.classpath("ru/m210projects/Build/Render/GdxRender/Shaders/sky_fragment.glsl").readString(),
+                numshades);
     }
 
     @Override
     protected void init(int numshades) throws Exception {
-        if (!isCompiled()) {
-            throw new Exception("Shader compile error: " + getLog());
-        }
-
-        this.numshades = numshades;
-        this.paletteloc = getUniformLocation("u_palette");
-        this.palookuploc = getUniformLocation("u_palookup");
-        this.numshadesloc = getUniformLocation("u_numshades");
-        this.shadeloc = getUniformLocation("u_shade");
-        this.alphaloc = getUniformLocation("u_alpha");
+        super.init(numshades);
 
         this.cameraloc = getUniformLocation("u_camera");
         this.projTransloc = getUniformLocation("u_projTrans");

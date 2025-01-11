@@ -261,11 +261,15 @@ public class Software extends AbstractRenderer implements PaletteListener, TileL
 
     @Override
     public void setview(int x1, int y1, int x2, int y2) {
+        x2 = Math.min(x2, MAXXDIM); // #GDX 31.12.2024 Software renderer doesn't support bigger resolutions
+        y2 = Math.min(y2, MAXYDIM);
+
         xdimen = (x2 - x1) + 1;
         halfxdimen = (xdimen >> 1);
         ydimen = (y2 - y1) + 1;
 
         super.setview(x1, y1, x2, y2);
+
         updateview();
         ortho.resize(xdim, ydim);
     }
@@ -369,6 +373,10 @@ public class Software extends AbstractRenderer implements PaletteListener, TileL
     }
 
     public void swapsprite(int k, int l, boolean z) {
+        if (k >= MAXSPRITESONSCREEN || l >= MAXSPRITESONSCREEN) {
+            return; // #GDX 31.12.2024
+        }
+
         Sprite stmp = tspriteptr[k];
         tspriteptr[k] = tspriteptr[l];
         tspriteptr[l] = stmp;
@@ -390,7 +398,7 @@ public class Software extends AbstractRenderer implements PaletteListener, TileL
     @Override
     public void drawmasks() {
         int i, j, k, l, gap, xs, ys, xp, yp, yoff, yspan;
-        int spritesortcnt = Math.min(tspriteptr.length, tSpriteList.getSize());
+        int spritesortcnt = Math.min(MAXSPRITESONSCREEN, tSpriteList.getSize());
 
         for (i = spritesortcnt - 1; i >= 0; i--) {
             tspriteptr[i] = tSpriteList.get(i);

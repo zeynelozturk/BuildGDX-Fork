@@ -614,6 +614,18 @@ public abstract class GameConfig implements ConfigContext {
         videoContext.setTextureFilter(glfilter);
     }
 
+    public boolean getPaletteFiltered() { return videoContext.paletteFiltered; }
+
+    public void setPaletteFiltered(boolean enabled) {
+        videoContext.paletteFiltered = enabled;
+    }
+
+    public boolean getSoftShading() { return videoContext.softShading; }
+
+    public void setSoftShading(boolean enabled) {
+        videoContext.softShading = enabled;
+    }
+
     public boolean isgShowFPS() {
         return videoContext.isgShowFPS();
     }
