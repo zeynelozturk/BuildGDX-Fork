@@ -21,6 +21,7 @@ import ru.m210projects.Build.Types.collections.LinkedList;
 import ru.m210projects.Build.Types.collections.ListNode;
 
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 
 import static ru.m210projects.Build.filehandle.fs.Directory.DUMMY_DIRECTORY;
@@ -42,13 +43,13 @@ public class CacheResourceMap extends LinkedMap<Group> {
             GroupNode node = (GroupNode) obtain();
             node.group = group;
             node.priority = priority;
-            groupMap.put(group.getName().toUpperCase(), node.getIndex());
+            groupMap.put(group.getName().toUpperCase(Locale.ROOT), node.getIndex());
             insert(node, priority.getLevel());
         }
     }
 
     public void removeGroup(Group group) {
-        final String key = group.getName().toUpperCase();
+        final String key = group.getName().toUpperCase(Locale.ROOT);
         int index = groupMap.getOrDefault(key, -1);
         if (index != -1) {
             groupMap.remove(key);
@@ -57,7 +58,7 @@ public class CacheResourceMap extends LinkedMap<Group> {
     }
 
     public CachePriority getPriority(Group group) {
-        final String key = group.getName().toUpperCase();
+        final String key = group.getName().toUpperCase(Locale.ROOT);
         int index = groupMap.getOrDefault(key, -1);
         if (index != -1) {
             GroupNode node = (GroupNode) nodeMap[index];
@@ -67,7 +68,7 @@ public class CacheResourceMap extends LinkedMap<Group> {
     }
 
     public Group getGroup(String groupName) {
-        int index = groupMap.getOrDefault(groupName.toUpperCase(), -1);
+        int index = groupMap.getOrDefault(groupName.toUpperCase(Locale.ROOT), -1);
         if (index != -1) {
             return nodeMap[index].get();
         }

@@ -112,7 +112,7 @@ public class Directory implements Group {
         Objects.requireNonNull(name, "name");
         FileEntry entry;
         synchronized (this) {
-            entry = entries.getOrDefault(name.toUpperCase(), DUMMY_ENTRY);
+            entry = entries.getOrDefault(name.toUpperCase(Locale.ROOT), DUMMY_ENTRY);
             if (entry.isDirectory()) {
                 addDirectory(entry);
             }
@@ -150,7 +150,7 @@ public class Directory implements Group {
                 Directory dir = this;
                 for (Path p : relPath) {
                     Map<String, Directory> directories = dir.directories;
-                    String key = p.toString().toUpperCase();
+                    String key = p.toString().toUpperCase(Locale.ROOT);
 
                     // if key is not exists and directory contains this entry, add entry to map
                     if (!directories.containsKey(key) && dir.entries.containsValue(dirEntry)) {
@@ -170,7 +170,7 @@ public class Directory implements Group {
 
     @NotNull
     private Directory addDirectory(FileEntry entry) {
-        String key = entry.getName().toUpperCase();
+        String key = entry.getName().toUpperCase(Locale.ROOT);
         return directories.computeIfAbsent(key, e -> {
             try {
                 Directory subDir = new Directory(entry.getPath());
@@ -185,7 +185,7 @@ public class Directory implements Group {
     public FileEntry addEntry(Path path) {
         FileEntry entry = newEntry(path);
         if (entry.exists()) {
-            entries.put(entry.getName().toUpperCase(), entry);
+            entries.put(entry.getName().toUpperCase(Locale.ROOT), entry);
             entry.setParent(this);
         }
         return entry;

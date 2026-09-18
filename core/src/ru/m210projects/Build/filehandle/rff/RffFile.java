@@ -126,9 +126,9 @@ public class RffFile implements Group {
     }
 
     public synchronized Entry getEntry(String name, String fmt) {
-        Map<String, Integer> entryMap = names.get(fmt.toUpperCase());
+        Map<String, Integer> entryMap = names.get(fmt.toUpperCase(Locale.ROOT));
         if (entryMap != null) {
-            int entryIndex = entryMap.getOrDefault(name.toUpperCase(), -1);
+            int entryIndex = entryMap.getOrDefault(name.toUpperCase(Locale.ROOT), -1);
             if (entryIndex != -1) {
                 return entryList.get(entryIndex);
             }
@@ -137,7 +137,7 @@ public class RffFile implements Group {
     }
 
     public synchronized Entry getEntry(int id, String fmt) {
-        Map<Integer, Integer> entryMap = ids.get(fmt.toUpperCase());
+        Map<Integer, Integer> entryMap = ids.get(fmt.toUpperCase(Locale.ROOT));
         if (entryMap != null) {
             Integer entryIndex = entryMap.getOrDefault(id, -1);
             if (entryIndex != -1) {

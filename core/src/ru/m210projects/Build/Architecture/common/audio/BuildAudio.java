@@ -116,12 +116,12 @@ public interface BuildAudio extends Audio {
 
         @Override
         public void registerDecoder(String extension, SoundData.Decoder decoder) {
-            decoders.put(extension.toUpperCase(), decoder);
+            decoders.put(extension.toUpperCase(Locale.ROOT), decoder);
         }
 
         @Override
         public SoundData.@NotNull Decoder getSoundDecoder(String extension) {
-            return decoders.getOrDefault(extension.toUpperCase(), DUMMY_DECODER);
+            return decoders.getOrDefault(extension.toUpperCase(Locale.ROOT), DUMMY_DECODER);
         }
 
         @Override

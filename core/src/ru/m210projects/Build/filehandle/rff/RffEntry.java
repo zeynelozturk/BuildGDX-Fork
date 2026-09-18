@@ -26,6 +26,7 @@ import ru.m210projects.Build.osd.OsdColor;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDateTime;
+import java.util.Locale;
 
 public class RffEntry implements Entry {
 
@@ -73,8 +74,8 @@ public class RffEntry implements Entry {
             flags |= DictFlags.ID.getBit();
         }
         this.flags = flags;
-        this.name = String.format("%s.%s",name.trim(), fmt).toUpperCase();
-        this.fmt = fmt.toUpperCase();
+        this.name = String.format("%s.%s",name.trim(), fmt).toUpperCase(Locale.ROOT);
+        this.fmt = fmt.toUpperCase(Locale.ROOT);
     }
 
     @Override

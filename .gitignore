@@ -63,4 +63,5 @@ gradle-app.setting
 
 ## OS Specific
 .DS_Store
-build/BuildGDX-fixed.jar
+build/BuildGDX-*.jar
+

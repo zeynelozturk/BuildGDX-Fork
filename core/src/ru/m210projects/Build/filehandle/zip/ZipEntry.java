@@ -23,6 +23,7 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Locale;
 
 public class ZipEntry implements Entry {
     private final InputStreamProvider provider;
@@ -41,7 +42,7 @@ public class ZipEntry implements Entry {
         this.name = name;
         this.directory = entry.isDirectory();
         if (name.contains(".")) {
-            this.extension = name.substring(name.lastIndexOf(".") + 1).toUpperCase();
+            this.extension = name.substring(name.lastIndexOf(".") + 1).toUpperCase(Locale.ROOT);
         } else {
             this.extension = "";
         }

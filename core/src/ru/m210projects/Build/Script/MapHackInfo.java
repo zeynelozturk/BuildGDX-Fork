@@ -41,7 +41,7 @@ public class MapHackInfo {
 
 	public boolean addMapInfo(Entry map, Entry mhkscript, String md4) {
 		if(map.exists() && mhkscript.exists()) {
-			if(md4 == null || MD4.getChecksum(map.getBytes()).equals(md4.toUpperCase())) {
+			if(md4 == null || MD4.getChecksum(map.getBytes()).equals(md4.toUpperCase(Locale.ROOT))) {
 				hacklist.put(map.getName().toLowerCase(Locale.ROOT), mhkscript);
 				return true;
 			}

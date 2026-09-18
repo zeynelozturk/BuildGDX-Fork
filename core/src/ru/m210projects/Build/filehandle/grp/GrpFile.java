@@ -37,11 +37,11 @@ public class GrpFile implements Group {
     private final String name;
     public GrpFile(String name) {
         this.entries = new LinkedHashMap<>();
-        this.name = name.toUpperCase();
+        this.name = name.toUpperCase(Locale.ROOT);
     }
 
     public GrpFile(String name, InputStreamProvider provider) throws IOException {
-        this.name = name.toUpperCase();
+        this.name = name.toUpperCase(Locale.ROOT);
         try (InputStream is = new BufferedInputStream(provider.newInputStream())) {
             String header = StreamUtils.readString(is, 12);
             if (header.compareTo(GRP_HEADER) != 0) {
@@ -58,7 +58,7 @@ public class GrpFile implements Group {
                     int size = StreamUtils.readInt(is);
                     GrpEntry entry = new GrpEntry(provider, fileName, offset, size);
                     entry.parent = this;
-                    entries.put(fileName.toUpperCase(), entry);
+                    entries.put(fileName.toUpperCase(Locale.ROOT), entry);
                     offset += size;
                 }
             }
@@ -73,7 +73,7 @@ public class GrpFile implements Group {
         synchronized (this) {
             entry = new GrpEntry(() -> new ByteArrayInputStream(data), name, -1, data.length);
             entry.parent = this;
-            entries.put(name.toUpperCase(), entry);
+            entries.put(name.toUpperCase(Locale.ROOT), entry);
         }
         return entry;
     }
@@ -82,7 +82,7 @@ public class GrpFile implements Group {
         Objects.requireNonNull(entry, "entry");
         synchronized (this) {
             if (entry.exists()) {
-                entries.put(entry.getName().toUpperCase(), entry);
+                entries.put(entry.getName().toUpperCase(Locale.ROOT), entry);
                 entry.setParent(this);
                 return true;
             }
@@ -94,7 +94,7 @@ public class GrpFile implements Group {
         Objects.requireNonNull(name, "name");
         Entry entry;
         synchronized (this) {
-            entry = entries.remove(name.toUpperCase());
+            entry = entries.remove(name.toUpperCase(Locale.ROOT));
             entry.setParent(DUMMY_DIRECTORY);
         }
         return entry;
@@ -104,7 +104,7 @@ public class GrpFile implements Group {
         Objects.requireNonNull(name, "name");
         Entry entry;
         synchronized (this) {
-            entry = entries.getOrDefault(name.toUpperCase(), DUMMY_ENTRY);
+            entry = entries.getOrDefault(name.toUpperCase(Locale.ROOT), DUMMY_ENTRY);
         }
         return entry;
     }

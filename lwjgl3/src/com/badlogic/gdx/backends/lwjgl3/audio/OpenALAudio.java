@@ -355,7 +355,7 @@ public class OpenALAudio implements BuildAudio, Lwjgl3Audio {
             return null;
         }
 
-        Class<? extends Music> musicClass = extensionToMusicClass.get(file.getExtension().toLowerCase());
+        Class<? extends Music> musicClass = extensionToMusicClass.get(file.getExtension().toLowerCase(Locale.ROOT));
         if (musicClass == null) {
             Console.out.println("Unknown file extension for music: " + file, OsdColor.RED);
             return null;
@@ -397,12 +397,12 @@ public class OpenALAudio implements BuildAudio, Lwjgl3Audio {
 
     @Override
     public void registerDecoder(String extension, SoundData.Decoder decoder) {
-        decoders.put(extension.toUpperCase(), decoder);
+        decoders.put(extension.toUpperCase(Locale.ROOT), decoder);
     }
 
     @Override
     public SoundData.@NotNull Decoder getSoundDecoder(String extension) {
-        return decoders.getOrDefault(extension.toUpperCase(), DUMMY_DECODER);
+        return decoders.getOrDefault(extension.toUpperCase(Locale.ROOT), DUMMY_DECODER);
     }
 
     // not implemented methods

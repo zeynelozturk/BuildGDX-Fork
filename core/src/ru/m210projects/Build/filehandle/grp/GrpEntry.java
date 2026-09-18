@@ -24,6 +24,7 @@ import ru.m210projects.Build.filehandle.InputStreamProvider;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Locale;
 import java.util.Objects;
 
 public class GrpEntry implements Entry {
@@ -40,7 +41,7 @@ public class GrpEntry implements Entry {
         this.size = size;
         this.name = name;
         if (name.contains(".")) {
-            this.extension = name.substring(name.lastIndexOf(".") + 1).toUpperCase();
+            this.extension = name.substring(name.lastIndexOf(".") + 1).toUpperCase(Locale.ROOT);
         } else {
             this.extension = "";
         }

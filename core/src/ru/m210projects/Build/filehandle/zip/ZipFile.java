@@ -58,7 +58,7 @@ public class ZipFile implements Group {
                 Entry zipEntry = newEntry(provider, file.toString(), entry, zis);
 
                 if (path.getParent() == null) {
-                    entries.put(file.toString().toUpperCase(), zipEntry);
+                    entries.put(file.toString().toUpperCase(Locale.ROOT), zipEntry);
                     zipEntry.setParent(this);
                 } else {
                     ZipFile dir = this;
@@ -69,13 +69,13 @@ public class ZipFile implements Group {
 
                         String dirName = p.toString();
                         Map<String, ZipFile> directories = dir.directories;
-                        String key = dirName.toUpperCase();
+                        String key = dirName.toUpperCase(Locale.ROOT);
 
                         dir = directories.getOrDefault(key, new ZipFile(dirName));
                         directories.putIfAbsent(key, dir);
                     }
 
-                    dir.entries.put(zipEntry.getName().toUpperCase(), zipEntry);
+                    dir.entries.put(zipEntry.getName().toUpperCase(Locale.ROOT), zipEntry);
                     zipEntry.setParent(dir);
                 }
 
@@ -112,13 +112,13 @@ public class ZipFile implements Group {
         ZipFile dir = this;
         Entry result = DUMMY_ENTRY;
         for (Path p : path) {
-            Entry entry = dir.entries.getOrDefault(p.toString().toUpperCase(), DUMMY_ENTRY);
+            Entry entry = dir.entries.getOrDefault(p.toString().toUpperCase(Locale.ROOT), DUMMY_ENTRY);
             if (!entry.exists()) {
                 return DUMMY_ENTRY;
             }
 
             if (entry.isDirectory()) {
-                dir = dir.directories.getOrDefault(entry.getName().toUpperCase(), this);
+                dir = dir.directories.getOrDefault(entry.getName().toUpperCase(Locale.ROOT), this);
             }
             result = entry;
         }

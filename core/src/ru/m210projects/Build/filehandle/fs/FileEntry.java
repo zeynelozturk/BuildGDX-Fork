@@ -28,6 +28,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Objects;
 
 import static ru.m210projects.Build.filehandle.fs.Directory.DUMMY_DIRECTORY;
@@ -51,7 +52,7 @@ public class FileEntry implements Entry {
         this.path = path;
         this.name = name;
         if (name.contains(".")) {
-            this.extension = name.substring(name.lastIndexOf(".") + 1).toUpperCase();
+            this.extension = name.substring(name.lastIndexOf(".") + 1).toUpperCase(Locale.ROOT);
         } else {
             this.extension = "";
         }
@@ -147,7 +148,7 @@ public class FileEntry implements Entry {
     public boolean delete() {
         try {
             if (Files.deleteIfExists(path)) {
-                physicalDirectory.entries.remove(getName().toUpperCase());
+                physicalDirectory.entries.remove(getName().toUpperCase(Locale.ROOT));
                 return true;
             }
             return false;

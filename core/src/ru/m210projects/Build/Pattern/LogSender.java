@@ -24,6 +24,7 @@ import ru.m210projects.Build.osd.ConsoleLogger;
 
 import java.io.OutputStream;
 import java.net.*;
+import java.util.Locale;
 
 public abstract class LogSender {
 
@@ -60,7 +61,7 @@ public abstract class LogSender {
         String version = game.appVersion;
 
         String filename = version + "_" + game.date.getDate(System.currentTimeMillis());
-        filename = filename.replaceAll("[^a-zA-Z0-9_]", "").toLowerCase();
+        filename = filename.replaceAll("[^a-zA-Z0-9_]", "").toLowerCase(Locale.ROOT);
 
         String text = getLog();
         if (!comment.isEmpty()) {

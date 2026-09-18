@@ -22,6 +22,7 @@ import java.net.HttpURLConnection;
 import java.net.Inet4Address;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.StringTokenizer;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -77,7 +78,7 @@ class Gateway {
             if (serviceType == null || controlURL == null) {
                 continue;
             }
-            if (serviceType.trim().toLowerCase().contains(":wanipconnection:") || serviceType.trim().toLowerCase().contains(":wanpppconnection:")) {
+            if (serviceType.trim().toLowerCase(Locale.ROOT).contains(":wanipconnection:") || serviceType.trim().toLowerCase(Locale.ROOT).contains(":wanpppconnection:")) {
                 this.serviceType = serviceType.trim();
                 this.controlURL = controlURL.trim();
             }

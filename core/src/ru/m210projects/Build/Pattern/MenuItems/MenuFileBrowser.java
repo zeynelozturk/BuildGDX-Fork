@@ -106,7 +106,7 @@ public abstract class MenuFileBrowser extends MenuItem implements ScrollableMenu
     }
 
     public void registerExtension(String ext, int pal, int priority) {
-        extensionProperties.put(ext.toUpperCase(), new ExtProp(pal, priority));
+        extensionProperties.put(ext.toUpperCase(Locale.ROOT), new ExtProp(pal, priority));
     }
 
     public void registerClass(Class<?> cl, int pal, int priority) {

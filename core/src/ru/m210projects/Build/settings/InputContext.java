@@ -149,7 +149,7 @@ public class InputContext implements ConfigContext {
                     controllerMapping.putButton(button, id);
                 }
             }
-            controllerMappingMap.put(name.toUpperCase(), controllerMapping);
+            controllerMappingMap.put(name.toUpperCase(Locale.ROOT), controllerMapping);
         } while (count < 16);
     }
 
@@ -317,7 +317,7 @@ public class InputContext implements ConfigContext {
     }
 
     public ControllerMapping getControllerMapping(String controllerName) {
-        return controllerMappingMap.computeIfAbsent(controllerName.toUpperCase(), e -> new ControllerMapping(controllerName));
+        return controllerMappingMap.computeIfAbsent(controllerName.toUpperCase(Locale.ROOT), e -> new ControllerMapping(controllerName));
     }
 
     public void unbindAll(GameKey gameKey) {

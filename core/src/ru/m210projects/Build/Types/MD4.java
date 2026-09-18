@@ -17,6 +17,7 @@
 package ru.m210projects.Build.Types;
 
 import java.security.MessageDigest;
+import java.util.Locale;
 
 /**
  * Implements the MD4 message digest algorithm in Java.
@@ -292,7 +293,7 @@ public class MD4 {
 
 		StringBuilder result = new StringBuilder();
 		for (byte value : b) {
-			result.append(Integer.toString((value & 0xff) + 0x100, 16).substring(1).toUpperCase());
+			result.append(Integer.toString((value & 0xff) + 0x100, 16).substring(1).toUpperCase(Locale.ROOT));
 		}
 
 		return result.toString();
