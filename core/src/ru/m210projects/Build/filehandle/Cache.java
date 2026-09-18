@@ -114,7 +114,8 @@ public class Cache {
         // #GDX 22.07.2024 Trying to find absolute path file
         if (!entry.exists()) {
             try {
-                FileEntry fileEntry = new AbsoluteFileEntry(path);
+                Path filePath = path.isAbsolute() ? path : getGameDirectory().getPath().resolve(path);
+                FileEntry fileEntry = new AbsoluteFileEntry(filePath);
                 if (fileEntry.exists() && !fileEntry.isDirectory()) {
                     entry = fileEntry;
                 }
