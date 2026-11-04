@@ -15,6 +15,9 @@ if not exist "%BASE%" (
 set "JAVAC=javac"
 if exist "%JAVA_HOME%\bin\javac.exe" set "JAVAC=%JAVA_HOME%\bin\javac.exe"
 if not exist "%JAVA_HOME%\bin\javac.exe" if exist "C:\Program Files\Eclipse Adoptium\jdk-8.0.504.1-hotspot\bin\javac.exe" set "JAVAC=C:\Program Files\Eclipse Adoptium\jdk-8.0.504.1-hotspot\bin\javac.exe"
+set "JAVA=java"
+if exist "%JAVA_HOME%\bin\java.exe" set "JAVA=%JAVA_HOME%\bin\java.exe"
+if not exist "%JAVA_HOME%\bin\java.exe" if exist "C:\Program Files\Eclipse Adoptium\jdk-8.0.504.1-hotspot\bin\java.exe" set "JAVA=C:\Program Files\Eclipse Adoptium\jdk-8.0.504.1-hotspot\bin\java.exe"
 set "JAR=jar"
 if exist "%JAVA_HOME%\bin\jar.exe" set "JAR=%JAVA_HOME%\bin\jar.exe"
 if not exist "%JAVA_HOME%\bin\jar.exe" if exist "C:\Program Files\Eclipse Adoptium\jdk-8.0.504.1-hotspot\bin\jar.exe" set "JAR=C:\Program Files\Eclipse Adoptium\jdk-8.0.504.1-hotspot\bin\jar.exe"
@@ -59,9 +62,15 @@ set "SOURCEPATH=%ROOT%core\src;%ROOT%lwjgl3\src"
  "%ROOT%lwjgl3\src\com\badlogic\gdx\backends\lwjgl3\audio\OpenALAudio.java"
 if errorlevel 1 exit /b 1
 
+rem Compile the matching Blood source against the base game JAR, without rebuilding game dependencies.
+"%JAVAC%" -encoding UTF-8 -source 8 -target 8 -cp "%BASE%" -sourcepath "%ROOT%patches\blood-profile\src" -d "%CLASSES%" ^
+ "%ROOT%patches\blood-profile\src\ru\m210projects\Blood\Factory\BloodNetwork.java"
+if errorlevel 1 exit /b 1
+
 copy /y "%BASE%" "%OUTPUT%" >nul
 pushd "%CLASSES%"
 "%JAR%" uf "%OUTPUT%" ^
+ "ru/m210projects/Blood/Factory/BloodNetwork.class" ^
  "ru/m210projects/Build/Architecture/common/audio/BuildAudio.class" ^
  "ru/m210projects/Build/Architecture/common/audio/BuildAudio$DummyAudio.class" ^
  "ru/m210projects/Build/filehandle/Cache.class" ^
@@ -95,7 +104,14 @@ pushd "%CLASSES%"
  "ru/m210projects/Build/Types/MD4$MD4Digest.class" ^
  "com/badlogic/gdx/backends/lwjgl3/audio/OpenALAudio.class" ^
  "com/badlogic/gdx/backends/lwjgl3/audio/OpenALAudio$1.class"
+set "JAR_EXIT=%ERRORLEVEL%"
 popd
+if not "%JAR_EXIT%"=="0" exit /b %JAR_EXIT%
+
+rem Verify the class loaded from the final JAR (before the temporary classes on the classpath).
+"%JAVAC%" -encoding UTF-8 -cp "%OUTPUT%" -d "%CLASSES%" "%ROOT%tests\BloodProfilePacketTest.java"
+if errorlevel 1 exit /b 1
+"%JAVA%" -cp "%OUTPUT%;%CLASSES%" BloodProfilePacketTest
 if errorlevel 1 exit /b 1
 
 echo Created: "%OUTPUT%"
